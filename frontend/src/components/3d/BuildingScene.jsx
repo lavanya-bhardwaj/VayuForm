@@ -4,12 +4,12 @@ import { OrbitControls } from "@react-three/drei";
 
 /* -------------------- MATERIALS -------------------- */
 
-const WALL = "#d8d2c8";
-const WALL_LIGHT = "#e1dcd4";
-const WALL_DARK = "#bcb5aa";
+const WALL = "#f8e7cb";
+const WALL_LIGHT = "#beab8b";
+const WALL_DARK = "#a29a8d";
 const WALL_RECESS = "#aaa39a";
 
-const GLASS = "#78929f";
+// const GLASS = "#817c7c";
 const FRAME = "#3f4142";
 const BALCONY = "#c9c2b8";
 
@@ -23,27 +23,28 @@ function Window({
   height = 1.55,
   rotation = [0, 0, 0],
   large = false,
+  glassColor = "#5a5858",
 }) {
   const finalWidth = large ? 2.35 : width;
   const finalHeight = large ? 2.7 : height;
 
   return (
     <group position={position} rotation={rotation}>
-      {/* Dark recessed frame */}
-      <mesh position={[0, 0, 0]} castShadow receiveShadow>
-        <boxGeometry args={[finalWidth + 0.16, finalHeight + 0.16, 0.14]} />
+      {/* Dark Frame - recessed back */}
+      <mesh position={[0, 0, -0.02]}>
+        <boxGeometry args={[finalWidth + 0.12, finalHeight + 0.12, 0.08]} />
         <meshStandardMaterial color={FRAME} />
       </mesh>
 
-      {/* Tinted glass */}
-      <mesh position={[0, 0, 0.04]} castShadow>
-        <boxGeometry args={[finalWidth, finalHeight, 0.055]} />
+      {/* Glass Pane - MUST BE FORWARD (+0.04) so it's visible */}
+      <mesh position={[0, 0, 0.04]}>
+        <boxGeometry args={[finalWidth, finalHeight, 0.02]} />
         <meshStandardMaterial
-          color={GLASS}
-          roughness={0.08}
-          metalness={0.18}
-          transparent
-          opacity={0.78}
+          color={glassColor}
+          roughness={0.1}
+          metalness={0.1}
+          transparent={true}
+          opacity={0.8}
         />
       </mesh>
     </group>
@@ -148,35 +149,65 @@ function Entrance() {
 
 /* -------------------- FLOOR DETAILS -------------------- */
 
+/* -------------------- FLOOR DETAILS (ALL 4 SIDES) -------------------- */
+
 function FloorBand({ y }) {
   return (
-    <mesh position={[0, y, 3.52]} castShadow receiveShadow>
-      <boxGeometry args={[9.8, 0.18, 0.08]} />
-      <meshStandardMaterial color={WALL_DARK} />
-    </mesh>
+    <group position={[0, y, 0]}>
+      {/* Front Band */}
+      <mesh position={[0, 0, 3.56]}>
+        <boxGeometry args={[10.3, 0.18, 0.18]} />
+        <meshStandardMaterial color={WALL_DARK} />
+      </mesh>
+
+      {/* Back Band */}
+      <mesh position={[0, 0, -3.56]}>
+        <boxGeometry args={[10.3, 0.18, 0.18]} />
+        <meshStandardMaterial color={WALL_DARK} />
+      </mesh>
+
+      {/* Left Band */}
+      <mesh position={[-5.06, 0, 0]}>
+        <boxGeometry args={[0.18, 0.18, 7.3]} />
+        <meshStandardMaterial color={WALL_DARK} />
+      </mesh>
+
+      {/* Right Band */}
+      <mesh position={[5.06, 0, 0]}>
+        <boxGeometry args={[0.18, 0.18, 7.3]} />
+        <meshStandardMaterial color={WALL_DARK} />
+      </mesh>
+    </group>
   );
 }
-
 /* -------------------- SIDE WINDOWS -------------------- */
+
+/* -------------------- LEFT SIDE WINDOWS & BALCONY -------------------- */
 
 function SideWindows() {
   return (
     <group>
       {/* LEFT SIDE */}
+      
+      {/* Floor 1: Window directly under the balcony */}
       <Window
-        position={[-5.02, 2.2, -0.3]}
+        position={[-5.02, 1.5, 0.2]}
         rotation={[0, -Math.PI / 2, 0]}
         width={1.2}
         height={1.45}
       />
+
+      {/* Floor 2: Double-width glass entrance opening to the extended balcony */}
       <Window
-        position={[-5.02, 5.2, -1.2]}
+        position={[-5.02, 4.5, 0.2]}
         rotation={[0, -Math.PI / 2, 0]}
-        width={1.2}
-        height={1.45}
+        width={2.8}
+        height={2.0}
       />
+
+      {/* Floor 3: Window directly above the balcony */}
       <Window
-        position={[-5.02, 8.2, -0.2]}
+        position={[-5.02, 7.5, 0.2]}
         rotation={[0, -Math.PI / 2, 0]}
         width={1.2}
         height={1.45}
@@ -184,19 +215,19 @@ function SideWindows() {
 
       {/* RIGHT SIDE */}
       <Window
-        position={[5.02, 2.2, -0.5]}
+        position={[5.02, 1.5, 0]}
         rotation={[0, Math.PI / 2, 0]}
         width={1.2}
         height={1.45}
       />
       <Window
-        position={[5.02, 5.2, 0.2]}
+        position={[5.02, 4.5, 0]}
         rotation={[0, Math.PI / 2, 0]}
         width={1.2}
         height={1.45}
       />
       <Window
-        position={[5.02, 8.2, -0.3]}
+        position={[5.02, 7.5, 0]}
         rotation={[0, Math.PI / 2, 0]}
         width={1.2}
         height={1.45}
@@ -205,18 +236,19 @@ function SideWindows() {
   );
 }
 
-/* -------------------- SIDE BALCONY -------------------- */
+/* -------------------- EXTENDED SIDE BALCONY -------------------- */
 
 function SideBalcony() {
   return (
     <Balcony
-      position={[-5.02, 5.2, 1.2]}
+      position={[-5.02, 3.5, 0.2]}
       rotation={[0, -Math.PI / 2, 0]}
-      width={2.2}
+      width={2.8}                      /* Extended to span two windows */
       depth={1.1}
     />
   );
 }
+
 
 /* -------------------- ROOF -------------------- */
 
