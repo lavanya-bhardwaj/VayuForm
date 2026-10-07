@@ -26,109 +26,202 @@ export const BASE_BUILDING_PALETTE = {
 };
 
 /**
- * Standard thermal exposure color stops:
- * 100: Red    - Maximum heat exposure (very hot)
- *  75: Orange - High heat exposure
- *  50: Yellow - Moderate heat exposure
- *  25: Green  - Reduced heat exposure / passive mitigation
- *   0: Blue   - Coolest / baseline protected
+ * Thermal gradient stops from coolest (0) to hottest (100).
+ * Each stop defines:
+ * - top: Darker / richer thermal tone at the upper roof / parapet level (where solar heat is highest)
+ * - bottom: Lighter / softer pastel tint at the lower ground level
+ *
+ * Both are soft, architectural tints (not harsh, oversaturated solid colors).
  */
-export const THERMAL_STOPS = [
-  { score: 0, hex: "#2563eb", name: "Cool (Blue)" },
-  { score: 25, hex: "#16a34a", name: "Mitigated (Green)" },
-  { score: 50, hex: "#eab308", name: "Moderate (Yellow)" },
-  { score: 75, hex: "#ea580c", name: "High Exposure (Orange)" },
-  { score: 100, hex: "#dc2626", name: "Severe Heat (Red)" },
+export const THERMAL_GRADIENT_STOPS = [
+  {
+    score: 0,
+    name: "Cool (Blue)",
+    top: "#2d7cd6",
+    bottom: "#bfdbfe",
+    accent: "#3b82f6",
+  },
+  {
+    score: 25,
+    name: "Mitigated (Green)",
+    top: "#389e5a",
+    bottom: "#bbf7d0",
+    accent: "#16a34a",
+  },
+  {
+    score: 50,
+    name: "Moderate (Yellow)",
+    top: "#dfa724",
+    bottom: "#fef08a",
+    accent: "#eab308",
+  },
+  {
+    score: 75,
+    name: "High Exposure (Orange)",
+    top: "#e66a2b",
+    bottom: "#fed7aa",
+    accent: "#ea580c",
+  },
+  {
+    score: 100,
+    name: "Severe Heat (Red)",
+    top: "#d94a38",
+    bottom: "#fca5a5",
+    accent: "#dc2626",
+  },
 ];
 
-const parsedStops = THERMAL_STOPS.map((stop) => ({
+const parsedGradientStops = THERMAL_GRADIENT_STOPS.map((stop) => ({
   score: stop.score,
-  color: new THREE.Color(stop.hex),
+  top: new THREE.Color(stop.top),
+  bottom: new THREE.Color(stop.bottom),
+  accent: new THREE.Color(stop.accent),
 }));
 
 /**
- * Smoothly interpolates the primary thermal color across the gradient:
- * red (100) -> orange (75) -> yellow (50) -> green (25) -> blue (0)
+ * Smoothly interpolates the top (darker) and bottom (lighter) thermal colors
+ * across the gradient from Red (100) -> Orange (75) -> Yellow (50) -> Green (25) -> Blue (0).
  *
  * @param {number} score - Thermal score between 0 and 100
- * @returns {string} Hex color string, e.g. "#dc2626"
+ * @returns {{ top: string, bottom: string, accent: string }}
  */
-export function getThermalColor(score) {
+export function getThermalGradientColors(score) {
   const num = Number(score);
   const s = Math.max(0, Math.min(100, Number.isFinite(num) ? num : 100));
 
-  let lower = parsedStops[0];
-  let upper = parsedStops[parsedStops.length - 1];
+  let lower = parsedGradientStops[0];
+  let upper = parsedGradientStops[parsedGradientStops.length - 1];
 
-  for (let i = 0; i < parsedStops.length - 1; i++) {
-    if (s >= parsedStops[i].score && s <= parsedStops[i + 1].score) {
-      lower = parsedStops[i];
-      upper = parsedStops[i + 1];
+  for (let i = 0; i < parsedGradientStops.length - 1; i++) {
+    if (s >= parsedGradientStops[i].score && s <= parsedGradientStops[i + 1].score) {
+      lower = parsedGradientStops[i];
+      upper = parsedGradientStops[i + 1];
       break;
     }
   }
 
   const range = upper.score - lower.score;
   const factor = range === 0 ? 0 : (s - lower.score) / range;
-  const c = new THREE.Color().copy(lower.color).lerp(upper.color, factor);
-  return "#" + c.getHexString();
-}
 
-/**
- * Derives a lighter, high-clarity tint of the thermal color for facade trims,
- * pilasters, window sills, and parapet coping so architectural depth is preserved.
- *
- * @param {number} score - Thermal score between 0 and 100
- * @returns {string} Hex color string
- */
-export function getThermalLightColor(score) {
-  const baseHex = getThermalColor(score);
-  const c = new THREE.Color(baseHex);
-  // Lerp 35% towards pure white for legible architectural relief
-  c.lerp(new THREE.Color("#ffffff"), 0.35);
-  return "#" + c.getHexString();
-}
-
-/**
- * Derives a roof surface thermal tone, softly balanced with the architectural deck.
- *
- * @param {number} score - Thermal score between 0 and 100
- * @returns {string} Hex color string
- */
-export function getThermalRoofColor(score) {
-  const baseHex = getThermalColor(score);
-  const c = new THREE.Color(baseHex);
-  // Soften 30% towards neutral roof tone so solar heat exposure is visible without glare
-  c.lerp(new THREE.Color("#b9b2a5"), 0.3);
-  return "#" + c.getHexString();
-}
-
-/**
- * Returns a complete building palette where relevant wall and facade materials
- * derive their colors from the thermal score.
- *
- * @param {number} thermalScore - Score between 0 (coolest/blue) and 100 (very hot/red)
- * @returns {object} Full building palette
- */
-export function getBuildingPalette(thermalScore) {
-  const wall = getThermalColor(thermalScore);
-  const wallLight = getThermalLightColor(thermalScore);
-  const coping = wallLight;
-  const roofDeck = getThermalRoofColor(thermalScore);
+  const topColor = new THREE.Color().copy(lower.top).lerp(upper.top, factor);
+  const bottomColor = new THREE.Color().copy(lower.bottom).lerp(upper.bottom, factor);
+  const accentColor = new THREE.Color().copy(lower.accent).lerp(upper.accent, factor);
 
   return {
-    ...BASE_BUILDING_PALETTE,
-    wall,
-    wallLight,
-    coping,
-    roofDeck,
+    top: "#" + topColor.getHexString(),
+    bottom: "#" + bottomColor.getHexString(),
+    accent: "#" + accentColor.getHexString(),
   };
 }
 
 /**
- * Returns descriptive status and badges for UI display.
+ * Single-color helper for backwards compatibility and UI indicators.
+ */
+export function getThermalColor(score) {
+  return getThermalGradientColors(score).top;
+}
+
+/**
+ * Creates a MeshStandardMaterial with custom shader injection that renders
+ * a smooth world-space vertical gradient tint (top to bottom) over the base architectural color.
  *
- * @param {number} score - Thermal score between 0 and 100
+ * @param {object} options
+ * @param {string} options.baseColor - Underlying architectural stucco/beige color
+ * @param {number} options.roughness - Standard material roughness
+ * @param {number} options.metalness - Standard material metalness
+ * @param {string} options.name - Unique material identifier for shader caching
+ * @param {number} options.minY - World elevation for bottom of gradient (ground = 0)
+ * @param {number} options.maxY - World elevation for top of gradient (roof parapet = 9.5)
+ */
+export function createThermalGradientMaterial({
+  baseColor = BASE_BUILDING_PALETTE.wall,
+  roughness = 0.88,
+  metalness = 0,
+  name = "wall",
+  minY = 0.0,
+  maxY = 9.5,
+} = {}) {
+  const initialGrad = getThermalGradientColors(100);
+
+  const uniforms = {
+    uTopColor: { value: new THREE.Color(initialGrad.top) },
+    uBottomColor: { value: new THREE.Color(initialGrad.bottom) },
+    uBaseColor: { value: new THREE.Color(baseColor) },
+    uStrength: { value: 0.58 }, // Default translucent tint strength (not opaque)
+    uMinY: { value: minY },
+    uMaxY: { value: maxY },
+  };
+
+  const mat = new THREE.MeshStandardMaterial({
+    roughness,
+    metalness,
+  });
+
+  mat.customProgramCacheKey = () => `thermalGrad_${name}`;
+
+  mat.onBeforeCompile = (shader) => {
+    shader.uniforms.uTopColor = uniforms.uTopColor;
+    shader.uniforms.uBottomColor = uniforms.uBottomColor;
+    shader.uniforms.uBaseColor = uniforms.uBaseColor;
+    shader.uniforms.uStrength = uniforms.uStrength;
+    shader.uniforms.uMinY = uniforms.uMinY;
+    shader.uniforms.uMaxY = uniforms.uMaxY;
+
+    // Inject world Y position varying into vertex shader
+    shader.vertexShader = `
+      varying float vWorldPosY;
+      ${shader.vertexShader}
+    `.replace(
+      "#include <begin_vertex>",
+      `
+      #include <begin_vertex>
+      vWorldPosY = (modelMatrix * vec4(position, 1.0)).y;
+      `
+    );
+
+    // Inject smooth top-to-bottom gradient tint blending in fragment shader
+    shader.fragmentShader = `
+      varying float vWorldPosY;
+      uniform vec3 uTopColor;
+      uniform vec3 uBottomColor;
+      uniform vec3 uBaseColor;
+      uniform float uStrength;
+      uniform float uMinY;
+      uniform float uMaxY;
+      ${shader.fragmentShader}
+    `.replace(
+      "#include <color_fragment>",
+      `
+      #include <color_fragment>
+      // Height factor t: 0.0 at ground level (minY) to 1.0 at roof level (maxY)
+      float tGrad = clamp((vWorldPosY - uMinY) / max(uMaxY - uMinY, 0.001), 0.0, 1.0);
+      
+      // Vertical gradient: top is darker/richer tint, bottom is lighter/softer tint
+      vec3 gradTint = mix(uBottomColor, uTopColor, tGrad);
+      
+      // Gentle depth response: slightly deeper tint at high-exposure roof, softer at ground
+      float effectiveStrength = uStrength * (0.65 + 0.35 * tGrad);
+      
+      // Soft translucent blend with base architectural material
+      diffuseColor.rgb = mix(uBaseColor, gradTint, clamp(effectiveStrength, 0.0, 1.0));
+      `
+    );
+  };
+
+  /**
+   * Updates uniforms dynamically without shader recompilation.
+   */
+  mat.updateThermal = (topColorHex, bottomColorHex, strength = 0.58) => {
+    if (topColorHex) uniforms.uTopColor.value.set(topColorHex);
+    if (bottomColorHex) uniforms.uBottomColor.value.set(bottomColorHex);
+    if (typeof strength === "number") uniforms.uStrength.value = strength;
+  };
+
+  return mat;
+}
+
+/**
+ * Returns descriptive status and badges for UI display.
  */
 export function getThermalStatus(score) {
   const num = Number(score);
@@ -136,34 +229,34 @@ export function getThermalStatus(score) {
   if (s >= 85) {
     return {
       label: "Severe Heat Exposure",
-      subtext: "Extreme solar gain on building envelope",
+      subtext: "High solar radiation on envelope (dark-to-light red gradient tint)",
       hex: "#dc2626",
     };
   }
   if (s >= 65) {
     return {
       label: "High Heat Exposure",
-      subtext: "Elevated thermal absorption on facades",
+      subtext: "Elevated thermal absorption on facades (orange gradient tint)",
       hex: "#ea580c",
     };
   }
   if (s >= 40) {
     return {
       label: "Moderate Solar Heat",
-      subtext: "Intermediate envelope heat exposure",
+      subtext: "Intermediate envelope exposure (yellow gradient tint)",
       hex: "#eab308",
     };
   }
   if (s >= 15) {
     return {
       label: "Mitigated / Passive Cooling",
-      subtext: "Significant thermal dissipation",
+      subtext: "Dissipated envelope heat (green gradient tint)",
       hex: "#16a34a",
     };
   }
   return {
     label: "Optimal / Cool State",
-    subtext: "Maximum passive thermal protection",
+    subtext: "Maximum passive thermal protection (blue gradient tint)",
     hex: "#2563eb",
   };
 }

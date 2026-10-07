@@ -1,9 +1,17 @@
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import * as THREE from "three";
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
-import { getBuildingPalette } from "../../utils/thermal";
-import { BuildingPaletteContext, useBuildingPalette } from "../../context/BuildingPaletteContext";
+import {
+  BASE_BUILDING_PALETTE,
+  createThermalGradientMaterial,
+  getThermalGradientColors,
+} from "../../utils/thermal";
+import {
+  BuildingPaletteContext,
+  useBuildingPalette,
+} from "../../context/BuildingPaletteContext";
+import Jali from "./interventions/Jali";
 
 /* ==========================================================================
    VAYUFORM – BASE BUILDING MODEL
@@ -52,11 +60,17 @@ function getMat(color, rough = 0.88, metal = 0) {
 }
 
 // p = centre position, s = size [x, y, z]
-function Box({ p, s, color, rough, metal, rot, cast = true, receive = true }) {
+function Box({ p, s, color, material, rough, metal, rot, cast = true, receive = true }) {
+  const effectiveMat =
+    material ||
+    (color instanceof THREE.Material
+      ? color
+      : getMat(color, rough, metal));
+
   return (
     <mesh
       geometry={unitBox}
-      material={getMat(color, rough, metal)}
+      material={effectiveMat}
       position={p}
       scale={s}
       rotation={rot}
@@ -85,8 +99,8 @@ function Window({ p, w = 1.1, h = 1.45, rot = [0, 0, 0], mullion = 0.1, palette 
       <Box p={[w / 2 - t / 2, 0, 0.05]} s={[t, h, 0.1]} color={pal.frame} rough={0.4} />
       {/* vertical mullion */}
       <Box p={[w * mullion, 0, 0.05]} s={[0.05, h, 0.09]} color={pal.frame} rough={0.4} />
-      {/* sill */}
-      <Box p={[0, -h / 2 - 0.04, 0.1]} s={[w + 0.2, 0.06, 0.2]} color={pal.wallLight} />
+      {/* sill: receives the thermal wall-light gradient tint */}
+      <Box p={[0, -h / 2 - 0.04, 0.1]} s={[w + 0.2, 0.06, 0.2]} material={pal.wallLightMat} />
     </group>
   );
 }
@@ -132,17 +146,17 @@ function Walls({ palette }) {
   const wallTop = ROOF - 0.4;
   return (
     <group>
-      {/* Left bay – full depth, flush front */}
+      {/* Left bay – full depth, flush front (thermal gradient tint) */}
       <Box
         p={[(X_LEFT + X_BAY) / 2, wallTop / 2, (Z_FRONT + Z_BACK) / 2]}
         s={[X_BAY - X_LEFT, wallTop, Z_FRONT - Z_BACK]}
-        color={pal.wall}
+        material={pal.wallMat}
       />
-      {/* Right bay – stops at the recessed wall */}
+      {/* Right bay – stops at the recessed wall (thermal gradient tint) */}
       <Box
         p={[(X_BAY + X_RIGHT) / 2, wallTop / 2, (Z_RECESS + Z_BACK) / 2]}
         s={[X_RIGHT - X_BAY, wallTop, Z_RECESS - Z_BACK]}
-        color={pal.wall}
+        material={pal.wallMat}
       />
     </group>
   );
@@ -156,14 +170,14 @@ function LeftBayFacade({ palette }) {
   const zf = Z_FRONT;
   return (
     <group>
-      {/* tall corner fin (dark) */}
+      {/* tall corner fin (dark structural charcoal) */}
       <Box p={[-4.93, 4.65, zf + 0.2]} s={[0.33, 9.3, 0.5]} color={pal.charcoal} />
 
-      {/* light pilasters framing the bay */}
-      <Box p={[-3.85, 4.15, zf + 0.02]} s={[0.4, 8.3, 0.04]} color={pal.wallLight} />
-      <Box p={[0.66, 4.15, zf + 0.02]} s={[0.42, 8.3, 0.04]} color={pal.wallLight} />
+      {/* light pilasters framing the bay (thermal wall-light gradient tint) */}
+      <Box p={[-3.85, 4.15, zf + 0.02]} s={[0.4, 8.3, 0.04]} material={pal.wallLightMat} />
+      <Box p={[0.66, 4.15, zf + 0.02]} s={[0.42, 8.3, 0.04]} material={pal.wallLightMat} />
       {/* light strip between the two top-floor windows */}
-      <Box p={[-1.355, 7.3, zf + 0.02]} s={[0.8, 1.95, 0.04]} color={pal.wallLight} />
+      <Box p={[-1.355, 7.3, zf + 0.02]} s={[0.8, 1.95, 0.04]} material={pal.wallLightMat} />
 
       {/* dark free-standing column that frames the jali zone */}
       <Box p={[-3.47, 3.3, zf + 0.15]} s={[0.33, 6.6, 0.3]} color={pal.charcoal} />
@@ -174,7 +188,7 @@ function LeftBayFacade({ palette }) {
       <Box p={[(-4.77 + X_BAY) / 2, 3.075, zf + 0.1]} s={[X_BAY + 4.77, 0.35, 0.22]} color={pal.charcoal} />
 
       {/* ledge under the top-floor windows */}
-      <Box p={[-1.4, 6.35, zf + 0.08]} s={[4.5, 0.1, 0.16]} color={pal.wallLight} />
+      <Box p={[-1.4, 6.35, zf + 0.08]} s={[4.5, 0.1, 0.16]} material={pal.wallLightMat} />
 
       {/* top-floor windows */}
       <Window p={[-2.42, 7.2, zf]} w={1.17} h={1.45} palette={pal} />
@@ -219,11 +233,11 @@ function RightBayFacade({ palette }) {
         s={[balconyWidth, 0.3, balconyDepth]}
         color={pal.charcoal}
       />
-      {/* light top lip on the slab edge, dark body below (as in the reference) */}
+      {/* light top lip on the slab edge */}
       <Box
         p={[(X_BAY + X_RIGHT) / 2, FLOOR_2 - 0.09, slabFront]}
         s={[balconyWidth, 0.18, 0.1]}
-        color={pal.wallLight}
+        material={pal.wallLightMat}
       />
       
       {/* Front Railing */}
@@ -269,11 +283,11 @@ function RightBayFacade({ palette }) {
         palette={pal}
       />
 
-      {/* ---- Enclose Recessed Inner Wall ---- */}
+      {/* ---- Enclose Recessed Inner Wall (thermal gradient tint) ---- */}
       <Box
         p={[X_BAY, (ROOF - 0.4) / 2, (Z_FRONT + Z_RECESS) / 2]}
         s={[0.2, ROOF - 0.4, Z_FRONT - Z_RECESS]}
-        color={pal.wall}
+        material={pal.wallMat}
       />
 
       {/* ---- Balcony doors (floors 1 and 2) ---- */}
@@ -359,26 +373,26 @@ function Roof({ palette }) {
       <Box p={[(-5.25 + X_BAY) / 2, y, (4.3 - 3.95) / 2]} s={[X_BAY + 5.25, 0.4, 4.3 + 3.95]} color={pal.charcoal} />
       <Box p={[(X_BAY + 5.25) / 2, y, (2.45 - 3.95) / 2]} s={[5.25 - X_BAY, 0.4, 2.45 + 3.95]} color={pal.charcoal} />
 
-      {/* roof deck */}
-      <Box p={[0, ROOF + 0.01, -0.7]} s={[10.3, 0.03, 7.4]} color={pal.roofDeck} cast={false} />
+      {/* roof deck (subtle solar thermal wash) */}
+      <Box p={[0, ROOF + 0.01, -0.7]} s={[10.3, 0.03, 7.4]} material={pal.roofDeckMat} cast={false} />
 
-      {/* parapet – follows the stepped footprint */}
-      <Box p={[-0.1, py, 4.15]} s={[10.1 - 4.2 + 0.1, PARAPET, pt]} color={pal.wall} /> {/* front, left bay */}
-      <Box p={[0, py, -3.85]} s={[10.4, PARAPET, pt]} color={pal.wall} /> {/* back */}
-      <Box p={[-5.1, py, 0.15]} s={[pt, PARAPET, 8.0]} color={pal.wall} /> {/* left */}
-      <Box p={[5.15, py, -0.8]} s={[pt, PARAPET, 6.3]} color={pal.wall} /> {/* right */}
-      <Box p={[3.0, py, 2.3]} s={[4.3, PARAPET, pt]} color={pal.wall} /> {/* front, right bay */}
-      <Box p={[X_BAY, py, 3.2]} s={[pt, PARAPET, 1.9]} color={pal.wall} /> {/* step between bays */}
+      {/* parapet – follows the stepped footprint (thermal wall gradient tint) */}
+      <Box p={[-0.1, py, 4.15]} s={[10.1 - 4.2 + 0.1, PARAPET, pt]} material={pal.wallMat} /> {/* front, left bay */}
+      <Box p={[0, py, -3.85]} s={[10.4, PARAPET, pt]} material={pal.wallMat} /> {/* back */}
+      <Box p={[-5.1, py, 0.15]} s={[pt, PARAPET, 8.0]} material={pal.wallMat} /> {/* left */}
+      <Box p={[5.15, py, -0.8]} s={[pt, PARAPET, 6.3]} material={pal.wallMat} /> {/* right */}
+      <Box p={[3.0, py, 2.3]} s={[4.3, PARAPET, pt]} material={pal.wallMat} /> {/* front, right bay */}
+      <Box p={[X_BAY, py, 3.2]} s={[pt, PARAPET, 1.9]} material={pal.wallMat} /> {/* step between bays */}
 
       {/* coping caps */}
-      <Box p={[-2.1, ROOF + PARAPET + 0.03, 4.15]} s={[6.1, 0.06, 0.3]} color={pal.coping} />
-      <Box p={[3.0, ROOF + PARAPET + 0.03, 2.3]} s={[4.4, 0.06, 0.3]} color={pal.coping} />
+      <Box p={[-2.1, ROOF + PARAPET + 0.03, 4.15]} s={[6.1, 0.06, 0.3]} material={pal.wallLightMat} />
+      <Box p={[3.0, ROOF + PARAPET + 0.03, 2.3]} s={[4.4, 0.06, 0.3]} material={pal.wallLightMat} />
 
-      {/* stair-head room (two stacked volumes) */}
-      <Box p={[0.3, ROOF + 1.1, -0.95]} s={[2.8, 2.2, 2.5]} color={pal.wall} />
-      <Box p={[0.3, ROOF + 2.23, -0.95]} s={[2.95, 0.07, 2.65]} color={pal.coping} />
-      <Box p={[1.7, ROOF + 0.65, 0.0]} s={[2.8, 1.3, 2.2]} color={pal.wallLight} />
-      <Box p={[1.7, ROOF + 1.33, 0.0]} s={[2.95, 0.07, 2.35]} color={pal.coping} />
+      {/* stair-head room */}
+      <Box p={[0.3, ROOF + 1.1, -0.95]} s={[2.8, 2.2, 2.5]} material={pal.wallMat} />
+      <Box p={[0.3, ROOF + 2.23, -0.95]} s={[2.95, 0.07, 2.65]} material={pal.wallLightMat} />
+      <Box p={[1.7, ROOF + 0.65, 0.0]} s={[2.8, 1.3, 2.2]} material={pal.wallLightMat} />
+      <Box p={[1.7, ROOF + 1.33, 0.0]} s={[2.95, 0.07, 2.35]} material={pal.wallLightMat} />
     </group>
   );
 }
@@ -388,7 +402,6 @@ function Roof({ palette }) {
 const LEAF = ["#6a8656", "#5d7a47", "#789460"];
 
 function Tree({ p, s = 1, trunk = 1.1, low = false }) {
-  // `low` = compact rounded shrub (used in the planter), otherwise a full tree crown
   const blobs = low
     ? [
         [0, trunk + 0.5, 0, 0.62, 0],
@@ -427,7 +440,6 @@ function Ground({ palette }) {
   const contextPalette = useBuildingPalette();
   const pal = palette || contextPalette;
   const joints = [];
-  // a few paving joints so the plinth doesn't read as one flat grey slab
   [4.8, 6.3, 7.8].forEach((z, i) =>
     joints.push(<Box key={`z${i}`} p={[0.5, 0.004, z]} s={[19, 0.008, 0.03]} color={pal.joint} cast={false} />)
   );
@@ -520,8 +532,54 @@ export function Building({ palette }) {
 
 /* -------------------- SCENE -------------------- */
 
-export default function BuildingScene({ thermalScore = 100 }) {
-  const palette = useMemo(() => getBuildingPalette(thermalScore), [thermalScore]);
+export default function BuildingScene({
+  thermalScore = 100,
+  tintOpacity = 0.58,
+  showJali = true,
+  jaliProps,
+}) {
+  // Create gradient materials once
+  const thermalMaterials = useMemo(() => {
+    const wallMat = createThermalGradientMaterial({
+      baseColor: BASE_BUILDING_PALETTE.wall,
+      roughness: 0.88,
+      name: "wall",
+      minY: 0.0,
+      maxY: 9.5,
+    });
+    const wallLightMat = createThermalGradientMaterial({
+      baseColor: BASE_BUILDING_PALETTE.wallLight,
+      roughness: 0.88,
+      name: "wallLight",
+      minY: 0.0,
+      maxY: 9.5,
+    });
+    const roofDeckMat = createThermalGradientMaterial({
+      baseColor: BASE_BUILDING_PALETTE.roofDeck,
+      roughness: 0.95,
+      name: "roofDeck",
+      minY: 0.0,
+      maxY: 9.5,
+    });
+    return { wallMat, wallLightMat, roofDeckMat };
+  }, []);
+
+  // Live uniform updates when thermalScore or tintOpacity moves
+  useEffect(() => {
+    const { top, bottom } = getThermalGradientColors(thermalScore);
+    thermalMaterials.wallMat.updateThermal(top, bottom, tintOpacity);
+    thermalMaterials.wallLightMat.updateThermal(top, bottom, tintOpacity * 0.9);
+    thermalMaterials.roofDeckMat.updateThermal(top, bottom, tintOpacity * 0.85);
+  }, [thermalScore, tintOpacity, thermalMaterials]);
+
+  const palette = useMemo(() => {
+    return {
+      ...BASE_BUILDING_PALETTE,
+      wallMat: thermalMaterials.wallMat,
+      wallLightMat: thermalMaterials.wallLightMat,
+      roofDeckMat: thermalMaterials.roofDeckMat,
+    };
+  }, [thermalMaterials]);
 
   return (
     <div style={{ width: "100%", height: "650px", background: "#d8e1e8", position: "relative" }}>
@@ -559,6 +617,19 @@ export default function BuildingScene({ thermalScore = 100 }) {
           <Ground palette={palette} />
           <Landscape />
           <Building palette={palette} />
+
+          {/* First Passive-Cooling Retrofit Intervention: Terracotta Diamond Jali Screen */}
+          {showJali && (
+            <Jali
+              position={[-2.42, 5.25, 4.19]}
+              width={3.0}
+              height={4.7}
+              depth={0.18}
+              density={0.55}
+              wallZ={Z_FRONT}
+              {...jaliProps}
+            />
+          )}
 
           <OrbitControls
             target={[0.4, 4.9, 0]}

@@ -84,13 +84,20 @@
   gap: 14px;
 }
 
-.thermal-badge-indicator {
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
+.thermal-gradient-swatch {
+  width: 24px;
+  height: 44px;
+  border-radius: 6px;
   flex-shrink: 0;
-  box-shadow: 0 0 12px rgba(0, 0, 0, 0.2);
-  transition: background-color 0.15s ease;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  transition: background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.thermal-card-top-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 .thermal-card-title {
@@ -100,8 +107,19 @@
   color: var(--text-h);
 }
 
+.thermal-tint-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: var(--social-bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  letter-spacing: 0.02em;
+}
+
 .thermal-card-status {
-  margin: 2px 0 0;
+  margin: 4px 0 0;
   font-size: 13px;
   color: var(--text);
 }
@@ -148,6 +166,40 @@
   width: 100%;
 }
 
+.thermal-slider-labels-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  color: var(--text);
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.thermal-control-title {
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.thermal-gradient-flow-hint {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+}
+
+.hint-pill {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 3px;
+  color: #ffffff;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 600;
+  margin: 0 2px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+
 .thermal-range-input {
   -webkit-appearance: none;
   appearance: none;
@@ -166,11 +218,11 @@
   border-radius: 6px;
   background: linear-gradient(
     to right,
-    #2563eb 0%,
-    #16a34a 25%,
-    #eab308 50%,
-    #ea580c 75%,
-    #dc2626 100%
+    #2d7cd6 0%,
+    #389e5a 25%,
+    #dfa724 50%,
+    #e66a2b 75%,
+    #d94a38 100%
   );
 }
 
@@ -180,11 +232,11 @@
   border-radius: 6px;
   background: linear-gradient(
     to right,
-    #2563eb 0%,
-    #16a34a 25%,
-    #eab308 50%,
-    #ea580c 75%,
-    #dc2626 100%
+    #2d7cd6 0%,
+    #389e5a 25%,
+    #dfa724 50%,
+    #e66a2b 75%,
+    #d94a38 100%
   );
 }
 
@@ -229,6 +281,101 @@
   font-weight: 500;
   color: var(--text);
   padding: 0 2px;
+}
+
+/* -------------------- OPACITY & INTERVENTION CONTROLS -------------------- */
+
+.thermal-secondary-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.thermal-opacity-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: var(--bg);
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  flex: 1;
+  min-width: 260px;
+}
+
+.thermal-opacity-label-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.thermal-opacity-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-h);
+}
+
+.thermal-opacity-val {
+  font-size: 12px;
+  font-family: var(--mono);
+  color: var(--text);
+}
+
+.thermal-opacity-input {
+  flex: 1;
+  min-width: 100px;
+  max-width: 180px;
+  accent-color: #d94a38;
+  cursor: pointer;
+}
+
+.thermal-intervention-toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--bg);
+  padding: 6px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+
+.jali-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.jali-toggle-btn:hover {
+  border-color: #be5b3c;
+  color: var(--text-h);
+}
+
+.jali-toggle-btn.active {
+  background: rgba(190, 91, 60, 0.1);
+  border-color: #be5b3c;
+  color: #be5b3c;
+}
+
+.jali-toggle-icon {
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+  transform: rotate(45deg);
+  background: currentColor;
+  display: inline-block;
+  box-shadow: 0 0 4px currentColor;
 }
 
 /* -------------------- QUICK PRESETS -------------------- */
@@ -283,9 +430,10 @@
 
 .preset-dot {
   width: 8px;
-  height: 8px;
-  border-radius: 50%;
+  height: 12px;
+  border-radius: 3px;
   display: inline-block;
+  border: 1px solid rgba(0, 0, 0, 0.15);
 }
 
 /* -------------------- 3D SCENE VIEWPORT -------------------- */
