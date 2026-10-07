@@ -1,4 +1,3 @@
-
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
 
@@ -17,36 +16,54 @@ const GROUND = "#77746e";
 
 /* -------------------- WINDOW -------------------- */
 
-function Window({
+ function Window({
   position,
   width = 1.25,
   height = 1.55,
   rotation = [0, 0, 0],
   large = false,
-  glassColor = "#5a5858",
+  glassColor = "#59666b", // Change this to whatever glass color you want
 }) {
   const finalWidth = large ? 2.35 : width;
   const finalHeight = large ? 2.7 : height;
 
   return (
     <group position={position} rotation={rotation}>
-      {/* Dark Frame - recessed back */}
+      {/* Dark Frame */}
       <mesh position={[0, 0, -0.02]}>
-        <boxGeometry args={[finalWidth + 0.12, finalHeight + 0.12, 0.08]} />
-        <meshStandardMaterial color={FRAME} />
-      </mesh>
 
-      {/* Glass Pane - MUST BE FORWARD (+0.04) so it's visible */}
-      <mesh position={[0, 0, 0.04]}>
-        <boxGeometry args={[finalWidth, finalHeight, 0.02]} />
-        <meshStandardMaterial
-          color={glassColor}
-          roughness={0.1}
-          metalness={0.1}
-          transparent={true}
-          opacity={0.8}
-        />
-      </mesh>
+  <boxGeometry
+    args={[
+      finalWidth + 0.16,
+      finalHeight + 0.16,
+      0.10
+    ]}
+  />
+
+  <meshStandardMaterial
+    color="#292b2c"
+    roughness={0.35}
+  />
+
+</mesh>
+      {/* Glass Pane using meshPhysicalMaterial */}
+      <mesh
+  position={[0, 0, 0.04]}
+  castShadow
+>
+  <boxGeometry args={[finalWidth, finalHeight, 0.02]} />
+
+  <meshPhysicalMaterial
+    color={glassColor}
+    roughness={0.12}
+    metalness={0.15}
+    transmission={0.25}
+    thickness={0.3}
+    transparent
+    opacity={0.82}
+    ior={1.5}
+  />
+</mesh>
     </group>
   );
 }
@@ -343,7 +360,97 @@ function FacadeDetails() {
     </group>
   );
 }
+function ArchitecturalDetails() {
+  return (
+    <group>
 
+      {/* ========================= */}
+      {/* FRONT VERTICAL FINS */}
+      {/* ========================= */}
+
+      <mesh
+        position={[-4.45, 4.5, 3.65]}
+        castShadow
+      >
+        <boxGeometry args={[0.28, 8.8, 0.25]} />
+        <meshStandardMaterial
+          color="#8f877a"
+          roughness={0.7}
+        />
+      </mesh>
+
+      <mesh
+        position={[4.45, 4.5, 3.65]}
+        castShadow
+      >
+        <boxGeometry args={[0.28, 8.8, 0.25]} />
+        <meshStandardMaterial
+          color="#8f877a"
+          roughness={0.7}
+        />
+      </mesh>
+
+
+      {/* ========================= */}
+      {/* CENTRAL FACADE COLUMN */}
+      {/* ========================= */}
+
+      <mesh
+        position={[-2.45, 4.5, 3.62]}
+        castShadow
+      >
+        <boxGeometry args={[0.18, 8.7, 0.18]} />
+        <meshStandardMaterial color="#c0b5a5" />
+      </mesh>
+
+
+      {/* ========================= */}
+      {/* WINDOW RECESS PANELS */}
+      {/* ========================= */}
+
+      <mesh
+        position={[-3.2, 4.5, 3.57]}
+        receiveShadow
+      >
+        <boxGeometry args={[1.55, 8.5, 0.08]} />
+        <meshStandardMaterial
+          color="#c8bdaa"
+          roughness={0.8}
+        />
+      </mesh>
+
+
+      {/* ========================= */}
+      {/* TOP FLOOR CANOPY */}
+      {/* ========================= */}
+
+      <mesh
+        position={[0, 8.75, 3.75]}
+        castShadow
+      >
+        <boxGeometry args={[9.4, 0.18, 0.55]} />
+        <meshStandardMaterial
+          color="#777168"
+          roughness={0.7}
+        />
+      </mesh>
+
+
+      {/* ========================= */}
+      {/* BALCONY SIDE WALLS */}
+      {/* ========================= */}
+
+      <mesh
+        position={[0.25, 3.45, 4.45]}
+        castShadow
+      >
+        <boxGeometry args={[0.12, 1.1, 0.12]} />
+        <meshStandardMaterial color="#4a4a47" />
+      </mesh>
+
+    </group>
+  );
+}
 /* -------------------- BUILDING -------------------- */
 
 function Building() {
@@ -387,9 +494,12 @@ function Building() {
       {/* Side windows */}
       <SideWindows />
 
+      {/* Architectural details */}
+      <ArchitecturalDetails />
+      
       {/* Façade details */}
       <FacadeDetails />
-
+      
       {/* Carport */}
       <Carport />
 
@@ -435,38 +545,56 @@ function Ground() {
 
 export default function BuildingScene() {
   return (
-    <div style={{ width: "100%", height: "650px" }}>
+    <div
+      style={{
+        width: "100%",
+        height: "650px",
+        background: "#a3d1e7",
+      }}
+    >
       <Canvas
         shadows
         camera={{
           position: [14, 10, 15],
           fov: 42,
         }}
+        gl={{
+          antialias: true,
+        }}
       >
-        {/* Balanced Lighting with Shadows */}
-        <ambientLight intensity={0.7} />
+
+        {/* SKY / DAYLIGHT */}
+
+        <color attach="background" args={["#a3cfe7"]} />
+
+        {/* Soft daylight */}
+
+        <ambientLight intensity={1.4} />
 
         <directionalLight
           position={[12, 18, 10]}
-          intensity={1.5}
+          intensity={2.2}
           castShadow
           shadow-mapSize-width={2048}
           shadow-mapSize-height={2048}
           shadow-camera-near={0.5}
           shadow-camera-far={50}
-          shadow-camera-left={-10}
-          shadow-camera-right={10}
-          shadow-camera-top={10}
-          shadow-camera-bottom={-10}
+          shadow-camera-left={-15}
+          shadow-camera-right={15}
+          shadow-camera-top={15}
+          shadow-camera-bottom={-15}
         />
 
-        <directionalLight position={[-8, 8, -5]} intensity={0.4} />
+        {/* Fill light */}
 
-        {/* Scene Components */}
+        <directionalLight
+          position={[-10, 8, -8]}
+          intensity={0.6}
+        />
+
         <Ground />
         <Building />
 
-        {/* Controls */}
         <OrbitControls
           enablePan={true}
           minDistance={7}
@@ -474,6 +602,7 @@ export default function BuildingScene() {
           minPolarAngle={Math.PI / 5}
           maxPolarAngle={Math.PI / 2.1}
         />
+
       </Canvas>
     </div>
   );
