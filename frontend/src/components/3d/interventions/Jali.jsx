@@ -1,250 +1,241 @@
-import { useMemo } from "react";
+import { useMemo, useRef } from "react";
 import * as THREE from "three";
 
-/**
- * Procedurally generates a perforated 3D screen geometry with repeated diamond openings.
- *
- * @param {object} params
- * @param {number} params.width - Width of the screen in meters
- * @param {number} params.height - Height of the screen in meters
- * @param {number} params.depth - Physical thickness (extrusion depth) in meters
- * @param {number} params.density - Porosity/opening ratio (0.25 to 0.85)
- * @param {number} params.border - Solid perimeter border margin in meters
- * @returns {THREE.ExtrudeGeometry} Centered extrude geometry
- */
 function createJaliGeometry({
-  width = 3.0,
-  height = 4.7,
-  depth = 0.18,
-  density = 0.55,
-  border = 0.08,
+  width,
+  height,
+  depth,
+  density,
 }) {
   const shape = new THREE.Shape();
-  const hw = width / 2;
-  const hh = height / 2;
 
-  // Outer rectangular perimeter
-  shape.moveTo(-hw, -hh);
-  shape.lineTo(hw, -hh);
-  shape.lineTo(hw, hh);
-  shape.lineTo(-hw, hh);
+  const halfW = width / 2;
+  const halfH = height / 2;
+
+  shape.moveTo(-halfW, -halfH);
+  shape.lineTo(halfW, -halfH);
+  shape.lineTo(halfW, halfH);
+  shape.lineTo(-halfW, halfH);
   shape.closePath();
 
-  // Diamond unit cell dimensions (slightly taller than wide for classic architectural proportions)
-  const baseW = 0.22;
-  const baseH = 0.30;
-  const pitchX = baseW * 1.35;
-  const pitchY = baseH * 0.70;
+  const holeCountX = Math.max(2, Math.floor(width * 2.2));
+  const holeCountY = Math.max(3, Math.floor(height * 2.2));
 
-  // Scale opening size according to density
-  const scale = Math.max(0.25, Math.min(0.85, Number(density) || 0.55));
-  const dw = baseW * scale;
-  const dh = baseH * scale;
+  const spacingX = width / holeCountX;
+  const spacingY = height / holeCountY;
 
-  const rows = Math.floor((height - border * 2) / pitchY);
-  const cols = Math.floor((width - border * 2) / pitchX);
+  const diamondSize =
+    Math.min(spacingX, spacingY) * density * 0.75;
 
-  // Staggered diamond lattice generation
-  for (let r = 0; r <= rows; r++) {
-    const isOdd = r % 2 === 1;
-    const xOffset = isOdd ? pitchX / 2 : 0;
-    const cy = -hh + border + r * pitchY;
+  for (let y = 0; y < holeCountY; y++) {
+    for (let x = 0; x < holeCountX; x++) {
+      const cx = -halfW + spacingX * (x + 0.5);
+      const cy = -halfH + spacingY * (y + 0.5);
 
-    for (let c = -1; c <= cols + 1; c++) {
-      const cx = -hw + border + c * pitchX + xOffset;
+      const hole = new THREE.Path();
 
-      // Ensure each diamond void stays cleanly inside the solid perimeter border
-      if (
-        cx - dw / 2 >= -hw + border &&
-        cx + dw / 2 <= hw - border &&
-        cy - dh / 2 >= -hh + border &&
-        cy + dh / 2 <= hh - border
-      ) {
-        const hole = new THREE.Path();
-        // Rhombus / diamond vertices (top -> right -> bottom -> left)
-        hole.moveTo(cx, cy + dh / 2);
-        hole.lineTo(cx + dw / 2, cy);
-        hole.lineTo(cx, cy - dh / 2);
-        hole.lineTo(cx - dw / 2, cy);
-        hole.closePath();
-        shape.holes.push(hole);
-      }
+      hole.moveTo(cx, cy + diamondSize);
+      hole.lineTo(cx + diamondSize, cy);
+      hole.lineTo(cx, cy - diamondSize);
+      hole.lineTo(cx - diamondSize, cy);
+      hole.closePath();
+
+      shape.holes.push(hole);
     }
   }
 
-  // Extrude to full 3D thickness with subtle beveling like molded terracotta tiles
   const geometry = new THREE.ExtrudeGeometry(shape, {
     depth,
     bevelEnabled: true,
-    bevelThickness: 0.006,
-    bevelSize: 0.006,
-    bevelSegments: 1,
+    bevelThickness: 0.025,
+    bevelSize: 0.025,
+    bevelSegments: 2,
   });
 
-  // Center geometry so origin sits at the 3D center of the screen
   geometry.center();
-  geometry.computeVertexNormals();
 
   return geometry;
 }
 
-/**
- * Creates structural standoff brackets that bridge the air gap from the facade wall
- * to the back face of the jali screen.
- */
 function createStandoffGeometry(gapLength) {
-  const geom = new THREE.CylinderGeometry(0.022, 0.022, gapLength, 12);
-  // Rotate cylinder along Z axis so it points from wall to jali
-  geom.rotateX(Math.PI / 2);
-  return geom;
+  const geometry = new THREE.CylinderGeometry(
+    0.035,
+    0.035,
+    gapLength,
+    12
+  );
+
+  geometry.rotateX(Math.PI / 2);
+
+  return geometry;
 }
 
-/**
- * Reusable 3D Jali Intervention Component.
- *
- * Models a genuine terracotta architectural shading screen with physical diamond
- * perforations, true 3D thickness, and structural standoff mountings leaving
- * a visible air gap in front of the building envelope.
- */
 export default function Jali({
   position = [-2.42, 5.25, 4.19],
-  width = 3.0,
+  width = 3,
   height = 4.7,
   depth = 0.18,
   density = 0.55,
-  color = "#be5b3c", // Warm fired terracotta clay
-  frameColor = "#8f3f26", // Darker perimeter frame
-  standoffColor = "#4a4542", // Architectural steel mounting tie-rods
-  showStandoffs = true,
-  wallZ = 3.75, // Z coordinate of the building facade wall
-  visible = true,
+  // wallZ = 3.75,
+  selected = false,
+  onSelect,
 }) {
-  // 1. Procedural Perforated Diamond Screen Geometry
+  const groupRef = useRef(null);
+
+  const [posX, posY, posZ] = position;
+
   const jaliGeometry = useMemo(() => {
-    return createJaliGeometry({ width, height, depth, density });
+    return createJaliGeometry({
+      width,
+      height,
+      depth,
+      density,
+    });
   }, [width, height, depth, density]);
 
-  // 2. Terracotta Material (matte, unglazed porous clay)
-  const terracottaMaterial = useMemo(() => {
-    return new THREE.MeshStandardMaterial({
-      color,
-      roughness: 0.88,
-      metalness: 0.02,
-    });
-  }, [color]);
+  const standoffGeometry = useMemo(() => {
+    return createStandoffGeometry(0.44);
+  }, []);
 
-  // 3. Perimeter Frame Material
-  const frameMaterial = useMemo(() => {
-    return new THREE.MeshStandardMaterial({
-      color: frameColor,
-      roughness: 0.82,
-      metalness: 0.05,
-    });
-  }, [frameColor]);
+  const handlePointerDown = (event) => {
+    event.stopPropagation();
 
-  // 4. Standoff Mountings Material (steel tie-rods)
-  const standoffMaterial = useMemo(() => {
-    return new THREE.MeshStandardMaterial({
-      color: standoffColor,
-      roughness: 0.45,
-      metalness: 0.8,
-    });
-  }, [standoffColor]);
+    onSelect?.();
 
-  // 5. Standoff brackets bridging the air gap
-  const [posX, posY, posZ] = position;
-  const jaliBackZ = posZ - depth / 2;
-  const gapLength = Math.max(0.05, jaliBackZ - wallZ);
-  const localStandoffZ = -depth / 2 - gapLength / 2;
+    const startX = event.clientX;
+    const startY = event.clientY;
 
-  const standoffGeom = useMemo(() => {
-    return createStandoffGeometry(gapLength);
-  }, [gapLength]);
+    const originalX = groupRef.current.position.x;
+    const originalY = groupRef.current.position.y;
 
-  // Standoff anchor coordinates relative to jali center
-  const standoffPoints = useMemo(() => {
-    const marginX = width / 2 - 0.14;
-    const marginY = height / 2 - 0.28;
-    return [
-      [-marginX, marginY],
-      [marginX, marginY],
-      [-marginX, 0],
-      [marginX, 0],
-      [-marginX, -marginY],
-      [marginX, -marginY],
-    ];
-  }, [width, height]);
+    const handlePointerMove = (moveEvent) => {
+      if (!groupRef.current) return;
 
-  if (!visible) return null;
+      const deltaX = moveEvent.clientX - startX;
+      const deltaY = moveEvent.clientY - startY;
+
+      const scaleFactor = 0.01;
+
+      const newX = originalX + deltaX * scaleFactor;
+      const newY = originalY - deltaY * scaleFactor;
+
+      groupRef.current.position.x = THREE.MathUtils.clamp(
+        newX,
+        -5 + width / 2,
+        5 - width / 2
+      );
+
+      groupRef.current.position.y = THREE.MathUtils.clamp(
+        newY,
+        height / 2 + 0.5,
+        8.3 - height / 2
+      );
+    };
+
+    const handlePointerUp = () => {
+      window.removeEventListener(
+        "pointermove",
+        handlePointerMove
+      );
+
+      window.removeEventListener(
+        "pointerup",
+        handlePointerUp
+      );
+    };
+
+    window.addEventListener(
+      "pointermove",
+      handlePointerMove
+    );
+
+    window.addEventListener(
+      "pointerup",
+      handlePointerUp
+    );
+  };
 
   return (
-    <group position={[posX, posY, posZ]}>
-      {/* Primary Perforated Terracotta Screen */}
-      <mesh
-        geometry={jaliGeometry}
-        material={terracottaMaterial}
-        castShadow
-        receiveShadow
-      />
-
-      {/* Structural Perimeter Frame Edges */}
-      {/* Top Edge */}
-      <mesh
-        position={[0, height / 2 + 0.025, 0]}
-        material={frameMaterial}
-        castShadow
-        receiveShadow
-      >
-        <boxGeometry args={[width + 0.08, 0.05, depth + 0.015]} />
-      </mesh>
-      {/* Bottom Edge */}
-      <mesh
-        position={[0, -height / 2 - 0.025, 0]}
-        material={frameMaterial}
-        castShadow
-        receiveShadow
-      >
-        <boxGeometry args={[width + 0.08, 0.05, depth + 0.015]} />
-      </mesh>
-      {/* Left Edge */}
-      <mesh
-        position={[-width / 2 - 0.025, 0, 0]}
-        material={frameMaterial}
-        castShadow
-        receiveShadow
-      >
-        <boxGeometry args={[0.05, height + 0.1, depth + 0.015]} />
-      </mesh>
-      {/* Right Edge */}
-      <mesh
-        position={[width / 2 + 0.025, 0, 0]}
-        material={frameMaterial}
-        castShadow
-        receiveShadow
-      >
-        <boxGeometry args={[0.05, height + 0.1, depth + 0.015]} />
+    <group
+      ref={groupRef}
+      position={[posX, posY, posZ]}
+      onPointerDown={handlePointerDown}
+    >
+      {/* JALI */}
+      <mesh geometry={jaliGeometry}>
+        <meshStandardMaterial
+          color="#be5b3c"
+          roughness={0.8}
+        />
       </mesh>
 
-      {/* Structural Standoff Brackets bridging the air gap to the facade */}
-      {showStandoffs &&
-        standoffPoints.map(([sx, sy], index) => (
-          <group key={index} position={[sx, sy, localStandoffZ]}>
-            {/* Cylindrical tie-rod */}
-            <mesh
-              geometry={standoffGeom}
-              material={standoffMaterial}
-              castShadow
-            />
-            {/* Wall mounting plate flat against facade */}
-            <mesh
-              position={[0, 0, -gapLength / 2 + 0.01]}
-              material={standoffMaterial}
-              castShadow
-            >
-              <boxGeometry args={[0.08, 0.08, 0.02]} />
-            </mesh>
-          </group>
-        ))}
+      {/* TOP FRAME */}
+      <mesh position={[0, height / 2 + 0.08, 0]}>
+        <boxGeometry
+          args={[width + 0.25, 0.16, depth + 0.08]}
+        />
+        <meshStandardMaterial color="#8f3f26" />
+      </mesh>
+
+      {/* BOTTOM FRAME */}
+      <mesh position={[0, -height / 2 - 0.08, 0]}>
+        <boxGeometry
+          args={[width + 0.25, 0.16, depth + 0.08]}
+        />
+        <meshStandardMaterial color="#8f3f26" />
+      </mesh>
+
+      {/* LEFT FRAME */}
+      <mesh position={[-width / 2 - 0.08, 0, 0]}>
+        <boxGeometry
+          args={[0.16, height, depth + 0.08]}
+        />
+        <meshStandardMaterial color="#8f3f26" />
+      </mesh>
+
+      {/* RIGHT FRAME */}
+      <mesh position={[width / 2 + 0.08, 0, 0]}>
+        <boxGeometry
+          args={[0.16, height, depth + 0.08]}
+        />
+        <meshStandardMaterial color="#8f3f26" />
+      </mesh>
+
+      {/* STANDOFF LEFT */}
+      <mesh
+        geometry={standoffGeometry}
+        position={[-width / 2 - 0.02, 0, -0.22]}
+      >
+        <meshStandardMaterial color="#4a4542" />
+      </mesh>
+
+      {/* STANDOFF RIGHT */}
+      <mesh
+        geometry={standoffGeometry}
+        position={[width / 2 + 0.02, 0, -0.22]}
+      >
+        <meshStandardMaterial color="#4a4542" />
+      </mesh>
+
+      {/* SELECTION OUTLINE */}
+      {selected && (
+        <mesh>
+          <boxGeometry
+            args={[
+              width + 0.35,
+              height + 0.35,
+              depth + 0.35,
+            ]}
+          />
+
+          <meshBasicMaterial
+            color="#ffffff"
+            wireframe
+            transparent
+            opacity={0.8}
+          />
+        </mesh>
+      )}
     </group>
   );
 }

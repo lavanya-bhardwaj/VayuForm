@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import * as THREE from "three";
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
@@ -538,6 +538,7 @@ export default function BuildingScene({
   showJali = true,
   jaliProps,
 }) {
+  const [selectedJali, setSelectedJali] = useState(false);
   // Create gradient materials once
   const thermalMaterials = useMemo(() => {
     const wallMat = createThermalGradientMaterial({
@@ -583,8 +584,8 @@ export default function BuildingScene({
 
   return (
     <div style={{ width: "100%", height: "650px", background: "#d8e1e8", position: "relative" }}>
-      <Canvas
-        shadows="percentage"
+      <Canvas shadows="percentage" 
+        onPointerMissed={() => setSelectedJali(false)}
         dpr={[1, 2]}
         camera={{ position: [-10, 3.0, 28.5], fov: 30, near: 0.1, far: 1000 }}
         gl={{ antialias: true, toneMapping: THREE.NeutralToneMapping }}
@@ -620,24 +621,28 @@ export default function BuildingScene({
 
           {/* First Passive-Cooling Retrofit Intervention: Terracotta Diamond Jali Screen */}
           {showJali && (
-            <Jali
-              position={[-2.42, 5.25, 4.19]}
-              width={3.0}
-              height={4.7}
-              depth={0.18}
-              density={0.55}
-              wallZ={Z_FRONT}
-              {...jaliProps}
+            <Jali 
+            {...jaliProps} 
+            position={[-2.42, 5.25, 4.19]} 
+            width={3.0} 
+            height={4.7} 
+            depth={0.18} 
+            density={0.55} 
+            wallZ={Z_FRONT} 
+            selected={selectedJali} 
+            onSelect={() => setSelectedJali(true)} 
             />
           )}
 
           <OrbitControls
-            target={[0.4, 4.9, 0]}
-            enablePan
-            minDistance={8}
-            maxDistance={45}
-            minPolarAngle={Math.PI / 5}
-            maxPolarAngle={Math.PI / 2.05}
+          target={[0.4, 4.9, 0]}
+          enablePan={!selectedJali}
+          enableRotate={!selectedJali}
+          enableZoom={!selectedJali}
+          minDistance={8}
+          maxDistance={45}
+          minPolarAngle={Math.PI / 5}
+          maxPolarAngle={Math.PI / 2.05}
           />
         </BuildingPaletteContext.Provider>
       </Canvas>
