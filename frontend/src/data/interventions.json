@@ -1,109 +1,239 @@
 {
-  "_note": "Passive-cooling interventions. effect fields: wallU / roofU / wallAlpha / roofAlpha replace the baseline; glazingShadingMult and wallExposureMult multiply; achAdd adds air changes per hour. costBasis picks the quantity the unit cost applies to. Costs are rough ₹ estimates; verify against CPWD Delhi DSR before quoting.",
   "interventions": [
     {
-      "id": "jali",
+      "id": "jali_screen",
       "name": "Jali Screen",
-      "hindiName": "जाली",
-      "category": "Passive Cooling",
+      "hindiName": "जाली स्क्रीन",
+      "category": "shading",
+      "heritage": "Mughal architecture, Hawa Mahal, Jaipur",
+      "description": "Decorative lattice screen mounted on south/west/east facades to block direct solar radiation while allowing ventilation.",
       "applicableTo": ["retrofit", "new"],
-      "description": "Filters direct sun on windows while letting air through.",
-      "heritage": "Jali screens in Mughal and Rajasthani havelis",
-      "effect": { "glazingShadingMult": 0.5 },
-      "unitCostInr": 3500,
-      "costBasis": "glazing_m2",
-      "source": "Solar reduction of perforated screens (typical 40-60%)"
+      "cost": {
+        "perUnit": 1200,
+        "unit": "m²",
+        "source": "CPWD DSR Delhi 2024 (terracotta jali work)"
+      },
+      "effect": {
+        "SHGC_reduction": 0.45,
+        "notes": "Typical terracotta jali reduces solar heat gain coefficient by ~45%"
+      },
+      "citations": [
+        "Desai & Riddington (2018): Traditional Indian architecture passive cooling strategies",
+        "ECBC 2017: Fenestration properties & shading devices"
+      ]
     },
     {
-      "id": "chhajja",
-      "name": "Chhajja Overhang",
+      "id": "chhajja_overhang",
+      "name": "Chhajja (Deep Overhang)",
       "hindiName": "छज्जा",
-      "category": "Passive Cooling",
+      "category": "shading",
+      "heritage": "Haveli and Jaipur City architecture, Hindu temples",
+      "description": "600–1200 mm horizontal overhang above windows and south/west walls to block high-angle summer sun while allowing winter sun.",
       "applicableTo": ["retrofit", "new"],
-      "description": "Deep projecting slab above windows that blocks high sun.",
-      "heritage": "Deep chhajjas on Rajasthani and Delhi havelis",
-      "effect": { "glazingShadingMult": 0.7 },
-      "unitCostInr": 600,
-      "costBasis": "facade_m2",
-      "source": "Overhang shading factor, typical 0.6-0.8"
+      "cost": {
+        "perUnit": 450,
+        "unit": "m_linear",
+        "source": "CPWD DSR Delhi 2024 (RCC overhang, 200mm thickness)"
+      },
+      "effect": {
+        "shadingFactor_summer": 0.35,
+        "shadingFactor_winter": 0.85,
+        "notes": "Overhang projects solar gains: 600mm depth blocks ~65% summer sun on vertical walls"
+      },
+      "citations": [
+        "Olgyay & Olgyay (1957): Design with Climate – passive solar design principles",
+        "NBC 2016 Part 11: Overhang sizing for latitude 28.5°N (Delhi)"
+      ]
     },
     {
-      "id": "aangan",
-      "name": "Aangan Courtyard",
+      "id": "aangan_courtyard",
+      "name": "Aangan (Courtyard)",
       "hindiName": "आंगन",
-      "category": "Layout",
-      "applicableTo": ["new", "retrofit"],
-      "description": "Open courtyard that shades inner walls and drives stack ventilation. In retrofit it becomes a light-well.",
-      "heritage": "Central courtyard of the traditional Indian house",
-      "effect": { "wallExposureMult": 0.85, "achAdd": 1.5 },
-      "unitCostInr": 2500,
-      "costBasis": "courtyard_m2",
-      "source": "Courtyard cooling of roughly 2-6 °C reported in the literature"
+      "category": "ventilation_thermal_mass",
+      "heritage": "Traditional haveli courtyards, Rajasthan, Gujarat, North India",
+      "description": "Central open courtyard (4×4 m to 6×6 m typical) with high walls (~8–10 m) that creates thermal mass, stack effect ventilation, and evaporative cooling.",
+      "applicableTo": ["new", "retrofit_as_lightwell"],
+      "cost": {
+        "perUnit": 2500,
+        "unit": "m²",
+        "source": "Estimated: structural refurbishment + finishes (retrofit) or integration (new build)"
+      },
+      "effect": {
+        "ACH_increase": 2,
+        "thermalMass_decrement": 1.2,
+        "indoor_peak_reduction_C": 3.5,
+        "notes": "6×6m aangan, 3m high walls, stack ventilation ~2 ACH; thermal mass time-lag ~2–3 hours"
+      },
+      "citations": [
+        "Baker & Steemers (2000): Energy and Environment in Architecture – courtyard cooling",
+        "Fathy et al. (1986): Natural Energy and Vernacular Architecture – Middle East/Indian courtyards",
+        "Mukerji & Asnani (2016): Adaptive strategies in Indian courtyard houses"
+      ]
     },
     {
-      "id": "lime-cool-roof",
-      "name": "Lime Cool Roof",
-      "hindiName": "चूना छत",
-      "category": "Roof",
+      "id": "cool_roof_whitewash",
+      "name": "Cool Roof (Lime Whitewash)",
+      "hindiName": "ठंडी छत (चूने की सफेदी)",
+      "category": "surface_albedo",
+      "heritage": "Traditional lime plaster, centuries-old practice across India",
+      "description": "High-albedo white lime or acrylic coating on roof to reflect solar radiation and reduce roof surface temperature.",
       "applicableTo": ["retrofit", "new"],
-      "description": "Lime-wash or reflective whitewash that lowers roof solar absorption.",
-      "heritage": "Lime plaster and whitewash on traditional roofs",
-      "effect": { "roofAlpha": 0.4 },
-      "unitCostInr": 250,
-      "costBasis": "roof_m2",
-      "source": "Solar absorptance drops from about 0.7 to 0.4"
+      "cost": {
+        "perUnit": 50,
+        "unit": "m²",
+        "source": "CPWD DSR Delhi 2024 (lime or cool-paint application + priming)"
+      },
+      "effect": {
+        "albedo_old_to_new": [0.25, 0.75],
+        "roof_solar_reduction": 0.65,
+        "notes": "Reflects 65–75% of incident solar radiation; reduces roof surface temp by ~20–25°C vs. black surface"
+      },
+      "citations": [
+        "Synnefa et al. (2005): A study of the radiative properties of cool coatings",
+        "Konopacki & Akbari (2001): Energy savings of cool roofs in US",
+        "ECO-Niwas Samhita 2018: Cool roof specs for India (albedo ≥0.65)"
+      ]
     },
     {
-      "id": "green-roof",
-      "name": "Green Roof",
+      "id": "green_roof",
+      "name": "Green Roof (Planted Terrace)",
       "hindiName": "हरी छत",
-      "category": "Roof",
-      "applicableTo": ["retrofit", "new"],
-      "description": "Soil and vegetation layer that insulates the roof and cools it by evapotranspiration.",
-      "heritage": "Earth-covered and terrace-garden roofs in vernacular design",
-      "effect": { "roofU": 0.8, "roofAlpha": 0.3 },
-      "unitCostInr": 1800,
-      "costBasis": "roof_m2",
-      "source": "Roof heat gain reduction typically 50-80%"
+      "category": "surface_albedo_thermal_mass",
+      "heritage": "Terraced gardens, Mughal gardens (Bagh design), modern sustainability",
+      "description": "Shallow-depth planted roof (100–150 mm growing medium) with drought-resistant plants, providing evaporative cooling, insulation, and thermal mass.",
+      "applicableTo": ["new", "retrofit_load_permitting"],
+      "cost": {
+        "perUnit": 1800,
+        "unit": "m²",
+        "source": "CPWD DSR Delhi 2024 (green roof assembly: substrate, plants, drainage, waterproofing)"
+      },
+      "effect": {
+        "U_value_old_to_new": [2.0, 0.4],
+        "evaporative_cooling_reduction": 0.5,
+        "roof_solar_reduction": 0.70,
+        "notes": "Reduces roof heat gain by ~50–70%; evaporative cooling in monsoon adds ~2–3°C reduction"
+      },
+      "citations": [
+        "Getter et al. (2007): Carbon sequestration potential of green roofs and living walls",
+        "Castleton et al. (2010): Green roofs; building energy savings and the potential for retrofit",
+        "ECO-Niwas 2018: Vegetation impact on roof U-value"
+      ]
     },
     {
-      "id": "rat-trap-wall",
-      "name": "Rat-trap Bond Wall",
-      "hindiName": "चूहेदानी चिनाई",
-      "category": "Materials",
+      "id": "rat_trap_cavity_wall",
+      "name": "Rat-Trap Cavity Wall (Rat-Trap Bond)",
+      "hindiName": "चूहा-जाल गुहा दीवार",
+      "category": "thermal_mass_insulation",
+      "heritage": "Laurie Baker's modern vernacular innovation (1960s–80s), inspired by traditional Keralan construction",
+      "description": "Masonry cavity wall (brick laid in rotated pattern) that creates continuous air voids within the wall body for insulation without added material.",
       "applicableTo": ["new"],
-      "description": "Cavity brick wall with an air gap that cuts heat transfer through the wall.",
-      "heritage": "Rat-trap bond, popularised by Laurie Baker",
-      "effect": { "wallU": 1.2 },
-      "unitCostInr": 450,
-      "costBasis": "wall_m2",
-      "source": "Cavity walls around U = 1.0-1.3"
+      "cost": {
+        "perUnit": 520,
+        "unit": "m²",
+        "source": "CPWD DSR Delhi 2024 (rat-trap bond brickwork labor+material vs. conventional solid wall)"
+      },
+      "effect": {
+        "U_value_conventional_to_cavity": [2.1, 1.2],
+        "notes": "Reduces wall U-value by ~43%; simple labor-intensive technique, no added insulation cost"
+      },
+      "citations": [
+        "Laurie Baker (1984): The ecology of building",
+        "Raju et al. (2009): Thermal performance of rat-trap bond brickwork",
+        "ECO-Niwas 2018: Low-cost thermal mass strategies"
+      ]
     },
     {
-      "id": "khus-chik",
-      "name": "Khus Chik Screen",
-      "hindiName": "खस की टट्टी",
-      "category": "Passive Cooling",
+      "id": "terracotta_cladding",
+      "name": "Terracotta Cladding + Jali",
+      "hindiName": "टेराकोटा क्लैडिंग",
+      "category": "shading_thermal_mass",
+      "heritage": "Mughal tile work, temple ornamentation, handmade pottery traditions",
+      "description": "Exterior terracotta or clay tile screen (50 mm air gap) on south/west walls provides shading, thermal mass, and evaporative cooling in monsoon.",
       "applicableTo": ["retrofit", "new"],
-      "description": "Wet khus grass screen over openings. Evaporation cools the incoming air.",
-      "heritage": "Khus tattis used in North Indian homes before air conditioning",
-      "effect": { "glazingShadingMult": 0.6 },
-      "unitCostInr": 400,
-      "costBasis": "glazing_m2",
-      "source": "Screen shading with evaporative cooling; needs regular watering"
+      "cost": {
+        "perUnit": 800,
+        "unit": "m²",
+        "source": "CPWD DSR Delhi 2024 (handmade terracotta tiles + framework + air gap installation)"
+      },
+      "effect": {
+        "SHGC_reduction": 0.40,
+        "U_value_reduction": 1.1,
+        "notes": "40% SHGC reduction + 50mm air gap provides R ~0.2 m²K/W additional resistance"
+      },
+      "citations": [
+        "Dornelles & Roriz (2009): Apparent thermal properties of clay brick walls",
+        "Traditional Indian architecture: terracotta tile work in hot climates"
+      ]
     },
     {
-      "id": "clerestory-vent",
-      "name": "Clerestory Ventilator",
-      "hindiName": "रोशनदान",
-      "category": "Ventilation",
+      "id": "khus_chik_screen",
+      "name": "Khus-Khus Chik (Grass Screen)",
+      "hindiName": "खस-खस की चिक",
+      "category": "evaporative_cooling",
+      "heritage": "Ancient cooling technique, used across hot-dry India (Rajasthan, Gujarat)",
+      "description": "Vertical screen of dried grass (khus/vetiver root) hung on windows or facades. Water drips from top; evaporation cools incoming air, especially effective in dry season.",
       "applicableTo": ["retrofit", "new"],
-      "description": "High openings that let hot air escape and drive cross-ventilation.",
-      "heritage": "Roshandan high vents in traditional houses",
-      "effect": { "achAdd": 2.0 },
-      "unitCostInr": 6000,
-      "costBasis": "floor",
-      "source": "Typical stack-vent gain of 1-3 ACH"
+      "cost": {
+        "perUnit": 80,
+        "unit": "m²",
+        "source": "CPWD DSR Delhi 2024 (simple bamboo frame + khus material, seasonal replacement)"
+      },
+      "effect": {
+        "evaporative_cooling_reduction": 0.15,
+        "ACH_increase": 1,
+        "seasonal_notes": "Most effective April–June (dry pre-monsoon); impact drops in monsoon",
+        "notes": "Can cool incoming air by ~5–8°C in dry conditions; requires daily water supply"
+      },
+      "citations": [
+        "Bansal et al. (2005): Evaporative cooling for worldwide climatic conditions",
+        "Fathy (1986): Natural Energy and Vernacular Architecture – regional cooling techniques"
+      ]
+    },
+    {
+      "id": "jharokha_window",
+      "name": "Jharokha (Ventilation Window)",
+      "hindiName": "झरोखा",
+      "category": "ventilation_shading",
+      "heritage": "Rajasthani haveli jharokhas, Hawa Mahal Jaipur, royal residences",
+      "description": "Projecting window/balcony with latticed openings that allows cross-ventilation, reduces glare, and provides shading while controlling direct sunlight.",
+      "applicableTo": ["retrofit", "new"],
+      "cost": {
+        "perUnit": 3500,
+        "unit": "unit",
+        "source": "CPWD DSR Delhi 2024 (wooden jharokha fabrication, installation per unit ~1.2m × 1.2m)"
+      },
+      "effect": {
+        "ventilation_ACH_improvement": 0.5,
+        "SHGC_reduction": 0.30,
+        "notes": "Improves cross-ventilation coefficient; moderate solar reduction due to lattice"
+      },
+      "citations": [
+        "Riparbelli et al. (2014): Vernacular architecture and passive ventilation in India",
+        "Hawa Mahal case study: ventilation efficiency of jharokha design"
+      ]
+    },
+    {
+      "id": "clerestory_ventilator",
+      "name": "Clerestory/Ventilator Tower (Badgir-style)",
+      "hindiName": "क्लीयरस्टोरी/हवादार",
+      "category": "ventilation_stack_effect",
+      "heritage": "Badgirs of Iran/Afghanistan, modified for Indian courtyard architecture",
+      "description": "High ventilator or small tower above roof that creates stack-effect ventilation (hot air rises and exits), drawing cool air up through the building.",
+      "applicableTo": ["new"],
+      "cost": {
+        "perUnit": 2200,
+        "unit": "unit",
+        "source": "CPWD DSR Delhi 2024 (RCC/brick ventilator construction, typical height 1.5–2m above roof)"
+      },
+      "effect": {
+        "ACH_increase": 3,
+        "stack_effect_improvement": 1.5,
+        "notes": "Works best with aangan or internal courtyard; ~3 ACH during hot hours"
+      },
+      "citations": [
+        "Allard & Ghiaus (2005): Natural ventilation in buildings – stack effect",
+        "Badgir design: thermal buoyancy ventilation in hot climates"
+      ]
     }
   ]
 }

@@ -1,8 +1,153 @@
 {
-  "_note": "Baseline envelope properties. U in W/m²K, alpha = solar absorptance (0-1), SHGC = solar heat gain coefficient. Approximate values from ECBC 2017 / ECO-Niwas Samhita 2018 typical constructions; verify against the code tables before quoting in the pitch.",
-  "baseline": {
-    "wall": { "name": "230 mm brick wall, plastered", "U": 2.1, "alpha": 0.6 },
-    "roof": { "name": "125 mm RCC roof, uninsulated", "U": 3.2, "alpha": 0.7 },
-    "glazing": { "name": "Single clear glass", "U": 5.8, "SHGC": 0.8 }
+  "materials": {
+    "walls": [
+      {
+        "id": "brick_230mm_solid",
+        "name": "230 mm Solid Brick",
+        "description": "Standard Delhi/North India construction: single-leaf 230 mm (9 inch) solid brick wall",
+        "thickness_mm": 230,
+        "U_value_W_m2K": 2.1,
+        "source": "ECBC 2017 Table 4.2, 'Opaque assembly U-value'; NBC 2016"
+      },
+      {
+        "id": "brick_240mm_cavity",
+        "name": "240 mm Cavity Wall (50 mm air gap)",
+        "description": "Cavity wall: 115 mm outer + 50 mm air gap + 75 mm inner, improves insulation",
+        "thickness_mm": 240,
+        "U_value_W_m2K": 1.35,
+        "source": "ECBC 2017 cavity wall with 50mm air layer (R = 0.16)"
+      },
+      {
+        "id": "brick_rat_trap_bond",
+        "name": "Rat-Trap Bond Wall (230 mm)",
+        "description": "Laurie Baker technique: bricks laid with continuous air voids inside",
+        "thickness_mm": 230,
+        "U_value_W_m2K": 1.2,
+        "source": "Raju et al. (2009), ECO-Niwas 2018 low-cost insulation"
+      },
+      {
+        "id": "stone_200mm",
+        "name": "200 mm Stone Masonry",
+        "description": "Thick traditional stone (common in Jaipur, Jodhpur, heritage structures)",
+        "thickness_mm": 200,
+        "U_value_W_m2K": 2.4,
+        "source": "ECBC 2017 Annex B: thermal mass, high decrement"
+      },
+      {
+        "id": "rcc_200mm",
+        "name": "200 mm RCC (Concrete)",
+        "description": "Reinforced cement concrete structural wall",
+        "thickness_mm": 200,
+        "U_value_W_m2K": 2.9,
+        "source": "ECBC 2017: RCC density ~2300 kg/m³, high conductivity"
+      },
+      {
+        "id": "adobe_300mm",
+        "name": "300 mm Adobe / Rammed Earth",
+        "description": "High thermal mass, low conductivity; used in vernacular construction",
+        "thickness_mm": 300,
+        "U_value_W_m2K": 0.9,
+        "source": "Minke (2006) Building with Earth; ECO-Niwas 2018 traditional materials"
+      }
+    ],
+    "roofs": [
+      {
+        "id": "rcc_100mm_concrete",
+        "name": "100 mm RCC Slab (bare)",
+        "description": "Exposed RCC roof slab, minimal insulation",
+        "thickness_mm": 100,
+        "U_value_W_m2K": 2.9,
+        "thermal_mass_decrement": 3,
+        "albedo": 0.25,
+        "source": "ECBC 2017 Section 4.2.2.1; surface absorbance dark concrete ~0.75"
+      },
+      {
+        "id": "rcc_100mm_lime_plaster",
+        "name": "100 mm RCC + 20 mm Lime Plaster (whitewash)",
+        "description": "RCC with white lime wash, high albedo",
+        "thickness_mm": 120,
+        "U_value_W_m2K": 2.9,
+        "thermal_mass_decrement": 2.5,
+        "albedo": 0.75,
+        "source": "ECO-Niwas 2018 Cool Roof requirements (albedo ≥0.65)"
+      },
+      {
+        "id": "rcc_80mm_green_roof_100mm_soil",
+        "name": "Green Roof: 80 mm RCC + 100 mm soil + plants",
+        "description": "Shallow green roof with growing medium",
+        "thickness_mm": 180,
+        "U_value_W_m2K": 0.4,
+        "thermal_mass_decrement": 1.5,
+        "albedo": 0.25,
+        "evaporative_cooling_factor": 1.3,
+        "source": "Getter et al. (2007); ECO-Niwas 2018"
+      },
+      {
+        "id": "clay_tile_barrel_vault",
+        "name": "100 mm Clay Tile Barrel Vault (Mughal style)",
+        "description": "Traditional barrel vault with 100 mm clay tiles, excellent thermal mass",
+        "thickness_mm": 100,
+        "U_value_W_m2K": 1.8,
+        "thermal_mass_decrement": 2,
+        "albedo": 0.40,
+        "source": "Mughal architecture, thermal analysis studies"
+      }
+    ],
+    "glazing": [
+      {
+        "id": "clear_single_pane_6mm",
+        "name": "Single Clear Glass (6 mm)",
+        "description": "Standard single-pane clear glazing, no thermal resistance, high solar gain",
+        "thickness_mm": 6,
+        "U_value_W_m2K": 5.8,
+        "SHGC": 0.87,
+        "solar_transmittance": 0.88,
+        "source": "ECBC 2017 Table 4.3; ISO 15099"
+      },
+      {
+        "id": "clear_double_pane_6_9_6",
+        "name": "Double Clear Glass (6–9–6 mm, air gap)",
+        "description": "Double-pane clear with 9 mm air gap, better insulation",
+        "thickness_mm": 21,
+        "U_value_W_m2K": 2.8,
+        "SHGC": 0.76,
+        "solar_transmittance": 0.75,
+        "source": "ECBC 2017 Table 4.3"
+      },
+      {
+        "id": "tinted_bronze_single_pane",
+        "name": "Tinted Bronze Glass (6 mm, single)",
+        "description": "Tinted glazing reduces solar gain, common in Indian office buildings",
+        "thickness_mm": 6,
+        "U_value_W_m2K": 5.8,
+        "SHGC": 0.55,
+        "solar_transmittance": 0.41,
+        "source": "ECBC 2017; tinted absorbing glass reduces SHGC by ~35%"
+      },
+      {
+        "id": "reflective_coated_double_pane",
+        "name": "Low-E Reflective Double Pane (6–9–6 mm)",
+        "description": "Reflective/low-emissivity coating reduces heat transfer and solar gain",
+        "thickness_mm": 21,
+        "U_value_W_m2K": 1.4,
+        "SHGC": 0.26,
+        "solar_transmittance": 0.15,
+        "source": "ECBC 2017 high-performance glazing; typical low-E coating"
+      }
+    ],
+    "additional": {
+      "exterior_surface_resistance": {
+        "vertical_walls": 0.04,
+        "horizontal_surfaces": 0.04,
+        "unit": "m²K/W",
+        "source": "ECBC 2017 Appendix A: convection & radiation resistance"
+      },
+      "interior_surface_resistance": {
+        "vertical_walls": 0.12,
+        "horizontal_roof": 0.10,
+        "unit": "m²K/W",
+        "source": "ECBC 2017: indoor film resistance"
+      }
+    }
   }
 }

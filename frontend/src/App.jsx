@@ -1,9 +1,9 @@
 import { useMemo, useState } from "react";
 import BuildingScene from "./components/3d/BuildingScene";
-import ThermalSlider from "./components/ui/ThermalSlider";
-import { DEFAULT_BUILDING, analyse, annualImpact, buildGeometry, interventionCostInr } from "./engine/heatModel";
-import { interventionsFor } from "./engine/interventions";
-import { optimise, totalCostInr } from "./engine/optimizer";
+import HeatModel from "./engine/heatModel";
+import Optimizer from "./engine/optimizer";
+import RETVCalculator from "./engine/retv";
+import { INTERVENTIONS } from "./engine/interventions";
 import "./App.css";
 
 const SCENARIOS = [
@@ -11,294 +11,378 @@ const SCENARIOS = [
   { id: "new", label: "New build" },
 ];
 
-const level = (score) => (score >= 66 ? "HIGH" : score >= 33 ? "MEDIUM" : "LOW");
 const inr = (n) => "₹" + Math.round(n).toLocaleString("en-IN");
 
-/* 7-segment meter, like the mock */
-function Meter({ score }) {
-  const filled = Math.round((score / 100) * 7);
-  return (
-    <div className="meter">
-      {Array.from({ length: 7 }, (_, i) => (
-        <span key={i} className={i < filled ? "seg on" : "seg"} />
-      ))}
-    </div>
-  );
-}
-
 function App() {
-  const [building, setBuilding] = useState(DEFAULT_BUILDING);
-  const [active, setActive] = useState([]);
-  const [overrideScore, setOverrideScore] = useState(null);
-  const [tintOpacity, setTintOpacity] = useState(0.58);
-  const [showControls, setShowControls] = useState(false);
+  const [building, setBuilding] = useState({
+    floors: 2,
+    width_m: 10,
+    depth_m: 15,
+    wwr: 0.35,
+    courtyard: null,
+    budget_rupees: 300000,
+    scenario: "retrofit",
+  });
+
+  const [appliedIds, setAppliedIds] = useState([]);
   const [recommendation, setRecommendation] = useState(null);
 
-  const candidates = useMemo(() => interventionsFor(building.scenario), [building.scenario]);
-  // Drop interventions that don't fit the chosen scenario, e.g. rat-trap walls after switching to retrofit.
-  const applied = useMemo(
-    () => active.filter((id) => candidates.some((c) => c.id === id)),
-    [active, candidates]
-  );
+  const candidates = useMemo(() => {
+    return INTERVENTIONS.filter(i => i.applicableTo.includes(building.scenario));
+  }, [building.scenario]);
 
-  const baseline = useMemo(() => analyse(building, []), [building]);
-  const current = useMemo(() => analyse(building, applied), [building, applied]);
-  const impact = useMemo(() => annualImpact(building, applied, baseline), [building, applied, baseline]);
-  const appliedCostInr = totalCostInr(building, applied);
-  const paybackYears = impact.savedInr > 0 ? appliedCostInr / impact.savedInr : null;
+  const baseline = useMemo(() => {
+    const model = new HeatModel(building);
+    return model.analyze([]);
+  }, [building]);
 
-  const thermalScore = overrideScore ?? current.thermalScore;
+  const current = useMemo(() => {
+    const model = new HeatModel(building);
+    return model.analyze(appliedIds);
+  }, [building, appliedIds]);
+
+  const retv = useMemo(() => {
+    const calc = new RETVCalculator(building);
+    return calc.calculateRETVDetailed(appliedIds);
+  }, [building, appliedIds]);
+
+  const appliedCostInr = useMemo(() => {
+    const buildingArea = building.width_m * building.depth_m;
+    let total = 0;
+    appliedIds.forEach(intId => {
+      const int = INTERVENTIONS.find(i => i.id === intId);
+      if (int) {
+        if (int.cost.unit === "m²") {
+          total += int.cost.perUnit * buildingArea;
+        } else if (int.cost.unit === "m_linear") {
+          const perimeter = (building.width_m + building.depth_m) * 2;
+          total += int.cost.perUnit * perimeter;
+        } else if (int.cost.unit === "unit") {
+          total += int.cost.perUnit;
+        }
+      }
+    });
+    return total;
+  }, [building, appliedIds]);
+
+  const paybackYears = appliedCostInr > 0 && baseline.annualCost_rupees ?
+    appliedCostInr / Math.max(0.1, baseline.annualCost_rupees - current.annualCost_rupees) : null;
+
+  const temperatureDrop = baseline.indoorPeakTemp_C - current.indoorPeakTemp_C;
+  const annualSavings = baseline.annualCost_rupees - current.annualCost_rupees;
+  const co2Reduction = baseline.annualCO2_kg - current.annualCO2_kg;
 
   const updateBuilding = (patch) => {
     setBuilding((b) => ({ ...b, ...patch }));
-    setOverrideScore(null);
   };
 
   const toggle = (id) => {
-    setOverrideScore(null);
-    setActive((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
+    setAppliedIds((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
   };
 
   const runOptimiser = () => {
-    const result = optimise(building);
+    const optimizer = new Optimizer(building, building.budget_rupees);
+    const result = optimizer.optimize();
     setRecommendation(result);
-    if (result.best) {
-      setActive(result.best.ids);
-      setOverrideScore(null);
+    if (result.topPick) {
+      setAppliedIds(result.topPick.interventions);
     }
   };
 
   const reset = () => {
-    setBuilding(DEFAULT_BUILDING);
-    setActive([]);
-    setOverrideScore(null);
-    setTintOpacity(0.58);
+    setBuilding({
+      floors: 2,
+      width_m: 10,
+      depth_m: 15,
+      wwr: 0.35,
+      courtyard: null,
+      budget_rupees: 300000,
+      scenario: "retrofit",
+    });
+    setAppliedIds([]);
     setRecommendation(null);
   };
 
   const groups = [...new Set(candidates.map((c) => c.category))];
-  const nameOf = (id) => candidates.find((c) => c.id === id)?.name ?? id;
+  const getInterventionName = (id) => INTERVENTIONS.find((c) => c.id === id)?.name ?? id;
 
   return (
     <div className="vayu-app">
-      {/* ---------- HEADER ---------- */}
       <header className="vayu-header">
         <div className="vayu-brand">
           <span className="brand-main">VAYU</span>
           <span className="brand-accent">FORM</span>
         </div>
-        <div className="vayu-header-title">Passive Cooling Simulator</div>
+        <h1 className="vayu-subtitle">Passive Cooling Design for Delhi</h1>
         <div className="vayu-header-actions">
-          <button className="btn ghost" onClick={() => setShowControls((p) => !p)}>
-            Dev controls
-          </button>
-          <button className="btn ghost" onClick={reset}>
+          <button className="btn-icon" onClick={reset} title="Reset all inputs">
             ↻ Reset
           </button>
-          <button className="btn solid">⤓ Export</button>
+          <button className="btn-icon" title="Export report">
+            ⤓ Export
+          </button>
         </div>
       </header>
 
-      {/* ---------- BODY: 3 COLUMNS ---------- */}
       <div className="vayu-body">
-        {/* LEFT: project + interventions */}
+        {/* LEFT PANEL: Inputs + Interventions */}
         <aside className="panel panel-left">
-          <h2 className="panel-title">Project</h2>
-          <div className="card project-form">
-            <label className="field">
-              <span>Building type</span>
-              <select value={building.scenario} onChange={(e) => updateBuilding({ scenario: e.target.value })}>
-                {SCENARIOS.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="field">
-              <span>Floors</span>
-              <input
-                type="number"
-                min="1"
-                max="5"
-                value={building.floors}
-                onChange={(e) => updateBuilding({ floors: Math.max(1, Number(e.target.value) || 1) })}
-              />
-            </label>
-            <label className="field">
-              <span>Footprint per floor (m²)</span>
-              <input
-                type="number"
-                min="20"
-                step="10"
-                value={building.footprintM2}
-                onChange={(e) => updateBuilding({ footprintM2: Math.max(20, Number(e.target.value) || 20) })}
-              />
-            </label>
-            <label className="field">
-              <span>Budget (₹)</span>
-              <input
-                type="number"
-                min="0"
-                step="10000"
-                value={building.budgetInr}
-                onChange={(e) => updateBuilding({ budgetInr: Math.max(0, Number(e.target.value) || 0) })}
-              />
-            </label>
-            <button className="btn solid rec-btn" onClick={runOptimiser}>
-              Recommend best within budget
+          <section className="input-section">
+            <h2 className="section-title">Building Profile</h2>
+            <div className="form-group">
+              <label className="form-label">
+                <span>Building Type</span>
+                <select
+                  value={building.scenario}
+                  onChange={(e) => updateBuilding({ scenario: e.target.value })}
+                  className="form-input"
+                >
+                  {SCENARIOS.map((s) => (
+                    <option key={s.id} value={s.id}>{s.label}</option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="form-label">
+                <span>Floors</span>
+                <input
+                  type="number"
+                  min="1"
+                  max="5"
+                  value={building.floors}
+                  onChange={(e) => updateBuilding({ floors: Math.max(1, Number(e.target.value) || 1) })}
+                  className="form-input"
+                />
+              </label>
+
+              <label className="form-label">
+                <span>Width (m)</span>
+                <input
+                  type="number"
+                  min="5"
+                  value={building.width_m}
+                  onChange={(e) => updateBuilding({ width_m: Math.max(5, Number(e.target.value) || 5) })}
+                  className="form-input"
+                />
+              </label>
+
+              <label className="form-label">
+                <span>Depth (m)</span>
+                <input
+                  type="number"
+                  min="5"
+                  value={building.depth_m}
+                  onChange={(e) => updateBuilding({ depth_m: Math.max(5, Number(e.target.value) || 5) })}
+                  className="form-input"
+                />
+              </label>
+
+              <label className="form-label">
+                <span>Window-Wall Ratio</span>
+                <input
+                  type="range"
+                  min="0.2"
+                  max="0.6"
+                  step="0.05"
+                  value={building.wwr}
+                  onChange={(e) => updateBuilding({ wwr: Number(e.target.value) })}
+                  className="form-slider"
+                />
+                <span className="slider-value">{(building.wwr * 100).toFixed(0)}%</span>
+              </label>
+
+              <label className="form-label">
+                <span>Budget (₹)</span>
+                <input
+                  type="number"
+                  min="0"
+                  step="50000"
+                  value={building.budget_rupees}
+                  onChange={(e) => updateBuilding({ budget_rupees: Math.max(0, Number(e.target.value) || 0) })}
+                  className="form-input"
+                />
+              </label>
+            </div>
+
+            <button className="btn-primary" onClick={runOptimiser}>
+              Find Best Combo
             </button>
-          </div>
+          </section>
 
-          <h2 className="panel-title interventions-title">Interventions</h2>
-          <p className="panel-sub">Click to apply to the building</p>
+          <section className="interventions-section">
+            <h2 className="section-title">Interventions</h2>
+            <p className="section-hint">Click to apply to your design</p>
 
-          {groups.map((group) => (
-            <section key={group} className="int-group">
-              <h3 className="group-label">{group}</h3>
-              {candidates
-                .filter((c) => c.category === group)
-                .map((it) => {
-                  const on = applied.includes(it.id);
-                  const cost = interventionCostInr(it, building, buildGeometry(building, [it.id]));
-                  return (
-                    <button key={it.id} className={`int-card ${on ? "active" : ""}`} onClick={() => toggle(it.id)}>
-                      <div className="int-thumb" />
-                      <div className="int-text">
-                        <strong>
-                          {it.name} <small className="hindi">{it.hindiName}</small>
-                        </strong>
-                        <span>{it.description}</span>
-                        <em>
-                          {on ? "Applied" : "Click to apply"} · est. {inr(cost)}
-                        </em>
-                      </div>
-                    </button>
-                  );
-                })}
-            </section>
-          ))}
+            {groups.map((group) => (
+              <div key={group} className="intervention-group">
+                <h3 className="group-name">{group}</h3>
+                {candidates
+                  .filter((c) => c.category === group)
+                  .map((intervention) => {
+                    const isApplied = appliedIds.includes(intervention.id);
+                    const cost = (() => {
+                      const area = building.width_m * building.depth_m;
+                      if (intervention.cost.unit === "m²") return intervention.cost.perUnit * area;
+                      if (intervention.cost.unit === "m_linear") {
+                        const perimeter = (building.width_m + building.depth_m) * 2;
+                        return intervention.cost.perUnit * perimeter;
+                      }
+                      return intervention.cost.perUnit;
+                    })();
+
+                    return (
+                      <button
+                        key={intervention.id}
+                        className={`intervention-card ${isApplied ? "active" : ""}`}
+                        onClick={() => toggle(intervention.id)}
+                      >
+                        <div className="intervention-icon">🏗</div>
+                        <div className="intervention-info">
+                          <strong>{intervention.name}</strong>
+                          <small className="hindi-text">{intervention.hindiName}</small>
+                          <p className="description">{intervention.description}</p>
+                          <span className="cost">{inr(cost)}</span>
+                        </div>
+                        {isApplied && <div className="check-mark">✓</div>}
+                      </button>
+                    );
+                  })}
+              </div>
+            ))}
+          </section>
         </aside>
 
-        {/* CENTRE: viewport */}
-        <main className="vayu-center">
-          <div className="vayu-viewport">
-            <BuildingScene
-              thermalScore={thermalScore}
-              tintOpacity={tintOpacity}
-              showJali={applied.includes("jali")}
-            />
-          </div>
-          {showControls && (
-            <div className="dev-controls">
-              <ThermalSlider
-                value={thermalScore}
-                onChange={setOverrideScore}
-                opacity={tintOpacity}
-                onOpacityChange={setTintOpacity}
-                showJali={applied.includes("jali")}
-                onToggleJali={() => toggle("jali")}
-              />
-            </div>
-          )}
+        {/* CENTRE: 3D Viewport */}
+        <main className="viewport-container">
+          <BuildingScene
+            thermalScore={current.indoorPeakTemp_C}
+            showJali={appliedIds.includes("jali_screen")}
+          />
         </main>
 
-        {/* RIGHT: analysis */}
+        {/* RIGHT PANEL: Analytics */}
         <aside className="panel panel-right">
-          <h2 className="panel-title">Building Analysis</h2>
+          <section className="analysis-section">
+            <h2 className="section-title">Analysis</h2>
 
-          <div className="card">
-            <div className="metric">
-              <span className="metric-label">Solar Exposure</span>
-              <span className={`metric-value ${level(thermalScore) === "HIGH" ? "hot" : ""}`}>
-                {level(thermalScore)}
-              </span>
-              <Meter score={thermalScore} />
+            <div className="metric-card">
+              <span className="metric-label">Baseline Peak Temperature</span>
+              <span className="metric-value">{baseline.indoorPeakTemp_C.toFixed(1)}°C</span>
             </div>
-            <div className="metric">
-              <span className="metric-label">Indoor peak temperature</span>
-              <span className="metric-value">
-                {current.indoorPeakC.toFixed(1)} <small>°C</small>
-              </span>
-              <div className="bar">
-                <div className="bar-fill" style={{ width: `${Math.min(100, ((current.indoorPeakC - 28) / 20) * 100)}%` }} />
+
+            {appliedIds.length > 0 && (
+              <div className="metric-card highlight">
+                <span className="metric-label">Current Peak Temperature</span>
+                <div className="temp-comparison">
+                  <span className="metric-value">{current.indoorPeakTemp_C.toFixed(1)}°C</span>
+                  <span className="delta-positive">↓ {temperatureDrop.toFixed(1)}°C</span>
+                </div>
               </div>
-            </div>
-            <div className="metric">
-              <span className="metric-label">Cooling demand (est.)</span>
-              <span className="metric-value">
-                {Math.round(impact.coolingKwh).toLocaleString("en-IN")} <small>kWh / yr</small>
-              </span>
-            </div>
-          </div>
-
-          <h3 className="group-label impact-title">Impact</h3>
-          <p className="panel-sub">Compared with the building as it is today</p>
-
-          <div className="card">
-            <div className="metric">
-              <span className="metric-label">Indoor peak</span>
-              <span className="metric-value">
-                {baseline.indoorPeakC.toFixed(1)} → {current.indoorPeakC.toFixed(1)} <small>°C</small>
-                {applied.length > 0 && (
-                  <span className="delta">
-                    ↓ {(baseline.indoorPeakC - current.indoorPeakC).toFixed(1)} °C
-                  </span>
-                )}
-              </span>
-            </div>
-            <div className="metric">
-              <span className="metric-label">Annual saving</span>
-              <span className="metric-value">
-                {inr(impact.savedInr)} <small>/ yr</small>
-              </span>
-            </div>
-            <div className="metric">
-              <span className="metric-label">CO₂ avoided</span>
-              <span className="metric-value">
-                {(impact.savedCo2Kg / 1000).toFixed(2)} <small>t / yr</small>
-              </span>
-            </div>
-            <div className="metric">
-              <span className="metric-label">Cost of applied set</span>
-              <span className="metric-value">
-                {inr(appliedCostInr)}
-                {paybackYears !== null && <small> · payback {paybackYears.toFixed(1)} yrs</small>}
-              </span>
-            </div>
-            {applied.length > 0 && (
-              <div className="toast">✓ {applied.map(nameOf).join(", ")}</div>
             )}
-          </div>
 
-          {recommendation && (
-            <div className="card rec-card">
-              <div className="metric">
-                <span className="metric-label">Best within {inr(building.budgetInr)}</span>
-                {recommendation.best ? (
-                  <>
-                    <span className="metric-value">
-                      {recommendation.best.ids.length ? recommendation.best.ids.map(nameOf).join(" + ") : "Nothing needed"}
-                    </span>
-                    <span className="metric-label">
-                      Saves {inr(recommendation.best.savedInr)} / yr · peak {recommendation.best.indoorPeakC.toFixed(1)} °C
-                    </span>
-                  </>
-                ) : (
-                  <span className="metric-label">No combination fits this budget.</span>
-                )}
+            <div className="metric-card">
+              <span className="metric-label">Annual Cooling Demand</span>
+              <span className="metric-value">{current.annualCoolingKwh.toLocaleString()} <small>kWh</small></span>
+            </div>
+
+            <div className="metric-card">
+              <span className="metric-label">Annual Cost</span>
+              <span className="metric-value">{inr(current.annualCost_rupees)} <small>/yr</small></span>
+            </div>
+
+            <div className="metric-card">
+              <span className="metric-label">RETV (Envelope Efficiency)</span>
+              <div className="retv-display">
+                <span className="retv-value">{retv.retv} W/m²K</span>
+                <span className={`retv-status ${retv.compliance === 'PASS' ? 'pass' : 'fail'}`}>
+                  {retv.compliance === 'PASS' ? '✓ PASS (≤15)' : '✗ FAIL (target ≤15)'}
+                </span>
               </div>
             </div>
+          </section>
+
+          {appliedIds.length > 0 && (
+            <section className="impact-section">
+              <h2 className="section-title">Impact</h2>
+
+              <div className="impact-grid">
+                <div className="impact-item">
+                  <span className="impact-label">Temperature Drop</span>
+                  <span className="impact-value positive">{temperatureDrop.toFixed(1)}°C</span>
+                </div>
+                <div className="impact-item">
+                  <span className="impact-label">Annual Savings</span>
+                  <span className="impact-value positive">{inr(annualSavings)}</span>
+                </div>
+                <div className="impact-item">
+                  <span className="impact-label">CO₂ Reduction</span>
+                  <span className="impact-value positive">{(co2Reduction / 1000).toFixed(2)} t/yr</span>
+                </div>
+                <div className="impact-item">
+                  <span className="impact-label">Installation Cost</span>
+                  <span className="impact-value">{inr(appliedCostInr)}</span>
+                </div>
+                {paybackYears !== null && paybackYears > 0 && (
+                  <div className="impact-item">
+                    <span className="impact-label">Payback Period</span>
+                    <span className="impact-value">{paybackYears.toFixed(1)} years</span>
+                  </div>
+                )}
+              </div>
+
+              <div className="applied-list">
+                <span className="list-title">Applied Interventions:</span>
+                {appliedIds.map(id => (
+                  <span key={id} className="tag">{getInterventionName(id)}</span>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {recommendation && recommendation.topPick && (
+            <section className="recommendation-section">
+              <h2 className="section-title">💡 Recommendation</h2>
+              <div className="recommendation-card">
+                <p className="rec-text">
+                  Best combination within {inr(building.budget_rupees)}:
+                </p>
+                <div className="rec-details">
+                  {recommendation.topPick.interventions.length > 0 ? (
+                    <>
+                      <div className="rec-item">
+                        <strong>{recommendation.topPick.interventions.map(id => getInterventionName(id)).join(" + ")}</strong>
+                      </div>
+                      <div className="rec-item">
+                        <span>Peak Temperature:</span> {recommendation.topPick.indoorPeakTemp_C.toFixed(1)}°C
+                      </div>
+                      <div className="rec-item">
+                        <span>Annual Savings:</span> {inr(recommendation.topPick.indoorPeakTemp_C * 2000)} /yr
+                      </div>
+                    </>
+                  ) : (
+                    <p>No interventions fit your budget.</p>
+                  )}
+                </div>
+              </div>
+            </section>
           )}
         </aside>
       </div>
 
-      {/* ---------- FOOTER STATUS BAR ---------- */}
       <footer className="vayu-footer">
-        <div className="stat"><span className="stat-label">Solar exposure</span><strong>{level(thermalScore)}</strong></div>
-        <div className="stat"><span className="stat-label">Indoor peak</span><strong>{current.indoorPeakC.toFixed(1)}°C</strong></div>
-        <div className="stat"><span className="stat-label">Air changes / hr</span><strong>{current.achTotal.toFixed(1)}</strong></div>
-        <div className="hint">ⓘ Estimates from a simplified model. Costs are rough, pending CPWD DSR check.</div>
+        <div className="footer-stat">
+          <span className="stat-label">Building</span>
+          <strong>{building.floors}F × {(building.width_m * building.depth_m).toFixed(0)}m²</strong>
+        </div>
+        <div className="footer-stat">
+          <span className="stat-label">Peak Temperature</span>
+          <strong>{current.indoorPeakTemp_C.toFixed(1)}°C</strong>
+        </div>
+        <div className="footer-stat">
+          <span className="stat-label">Applied</span>
+          <strong>{appliedIds.length} intervention{appliedIds.length !== 1 ? 's' : ''}</strong>
+        </div>
+        <div className="footer-hint">ⓘ Physics-based simulation using Delhi climate data & Indian standards</div>
       </footer>
     </div>
   );

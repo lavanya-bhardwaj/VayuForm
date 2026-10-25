@@ -639,8 +639,9 @@ export default function BuildingScene({
           enablePan={!selectedJali}
           enableRotate={!selectedJali}
           enableZoom={!selectedJali}
-          minDistance={8}
+          minDistance={6}
           maxDistance={45}
+          distance={10}
           minPolarAngle={Math.PI / 5}
           maxPolarAngle={Math.PI / 2.05}
           />
