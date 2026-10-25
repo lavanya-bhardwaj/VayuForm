@@ -1,0 +1,8 @@
+{
+  "_note": "Baseline envelope properties. U in W/m²K, alpha = solar absorptance (0-1), SHGC = solar heat gain coefficient. Approximate values from ECBC 2017 / ECO-Niwas Samhita 2018 typical constructions; verify against the code tables before quoting in the pitch.",
+  "baseline": {
+    "wall": { "name": "230 mm brick wall, plastered", "U": 2.1, "alpha": 0.6 },
+    "roof": { "name": "125 mm RCC roof, uninsulated", "U": 3.2, "alpha": 0.7 },
+    "glazing": { "name": "Single clear glass", "U": 5.8, "SHGC": 0.8 }
+  }
+}

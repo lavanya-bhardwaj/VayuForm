@@ -42,7 +42,7 @@ button { font: inherit; cursor: pointer; }
 .btn { padding: 8px 16px; border-radius: 8px; border: 1px solid transparent; font-size: 14px; }
 .btn.ghost { background: transparent; color: var(--ink); }
 .btn.ghost:hover { background: var(--accent-soft); }
-.btn.solid { background: #e9dccd; border-color: var(--border); }
+.btn.solid { background: #e9dccd; border-color: var(--border); color: var(--ink); }
 
 /* ---------- body grid ---------- */
 .vayu-body {
@@ -108,3 +108,17 @@ button { font: inherit; cursor: pointer; }
   margin-left: auto; padding: 12px 20px; border-radius: 8px;
   background: #ebe1d6; color: var(--muted); font-size: 13px;
 }
+
+/* ---------- project form ---------- */
+.project-form { padding: 16px; display: flex; flex-direction: column; gap: 12px; margin-bottom: 8px; }
+.field { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--muted); }
+.field input, .field select {
+  padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border);
+  background: var(--bg); color: var(--ink); font: inherit;
+}
+.btn.rec-btn { width: 100%; background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn.rec-btn:hover { background: #a84622; }
+.interventions-title { margin-top: 24px; }
+.hindi { font-weight: 400; color: var(--muted); font-size: 12px; }
+.rec-card { margin-top: 16px; }
+.rec-card .metric-value { font-size: 16px; }

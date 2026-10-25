@@ -1,0 +1,109 @@
+{
+  "_note": "Passive-cooling interventions. effect fields: wallU / roofU / wallAlpha / roofAlpha replace the baseline; glazingShadingMult and wallExposureMult multiply; achAdd adds air changes per hour. costBasis picks the quantity the unit cost applies to. Costs are rough ₹ estimates; verify against CPWD Delhi DSR before quoting.",
+  "interventions": [
+    {
+      "id": "jali",
+      "name": "Jali Screen",
+      "hindiName": "जाली",
+      "category": "Passive Cooling",
+      "applicableTo": ["retrofit", "new"],
+      "description": "Filters direct sun on windows while letting air through.",
+      "heritage": "Jali screens in Mughal and Rajasthani havelis",
+      "effect": { "glazingShadingMult": 0.5 },
+      "unitCostInr": 3500,
+      "costBasis": "glazing_m2",
+      "source": "Solar reduction of perforated screens (typical 40-60%)"
+    },
+    {
+      "id": "chhajja",
+      "name": "Chhajja Overhang",
+      "hindiName": "छज्जा",
+      "category": "Passive Cooling",
+      "applicableTo": ["retrofit", "new"],
+      "description": "Deep projecting slab above windows that blocks high sun.",
+      "heritage": "Deep chhajjas on Rajasthani and Delhi havelis",
+      "effect": { "glazingShadingMult": 0.7 },
+      "unitCostInr": 600,
+      "costBasis": "facade_m2",
+      "source": "Overhang shading factor, typical 0.6-0.8"
+    },
+    {
+      "id": "aangan",
+      "name": "Aangan Courtyard",
+      "hindiName": "आंगन",
+      "category": "Layout",
+      "applicableTo": ["new", "retrofit"],
+      "description": "Open courtyard that shades inner walls and drives stack ventilation. In retrofit it becomes a light-well.",
+      "heritage": "Central courtyard of the traditional Indian house",
+      "effect": { "wallExposureMult": 0.85, "achAdd": 1.5 },
+      "unitCostInr": 2500,
+      "costBasis": "courtyard_m2",
+      "source": "Courtyard cooling of roughly 2-6 °C reported in the literature"
+    },
+    {
+      "id": "lime-cool-roof",
+      "name": "Lime Cool Roof",
+      "hindiName": "चूना छत",
+      "category": "Roof",
+      "applicableTo": ["retrofit", "new"],
+      "description": "Lime-wash or reflective whitewash that lowers roof solar absorption.",
+      "heritage": "Lime plaster and whitewash on traditional roofs",
+      "effect": { "roofAlpha": 0.4 },
+      "unitCostInr": 250,
+      "costBasis": "roof_m2",
+      "source": "Solar absorptance drops from about 0.7 to 0.4"
+    },
+    {
+      "id": "green-roof",
+      "name": "Green Roof",
+      "hindiName": "हरी छत",
+      "category": "Roof",
+      "applicableTo": ["retrofit", "new"],
+      "description": "Soil and vegetation layer that insulates the roof and cools it by evapotranspiration.",
+      "heritage": "Earth-covered and terrace-garden roofs in vernacular design",
+      "effect": { "roofU": 0.8, "roofAlpha": 0.3 },
+      "unitCostInr": 1800,
+      "costBasis": "roof_m2",
+      "source": "Roof heat gain reduction typically 50-80%"
+    },
+    {
+      "id": "rat-trap-wall",
+      "name": "Rat-trap Bond Wall",
+      "hindiName": "चूहेदानी चिनाई",
+      "category": "Materials",
+      "applicableTo": ["new"],
+      "description": "Cavity brick wall with an air gap that cuts heat transfer through the wall.",
+      "heritage": "Rat-trap bond, popularised by Laurie Baker",
+      "effect": { "wallU": 1.2 },
+      "unitCostInr": 450,
+      "costBasis": "wall_m2",
+      "source": "Cavity walls around U = 1.0-1.3"
+    },
+    {
+      "id": "khus-chik",
+      "name": "Khus Chik Screen",
+      "hindiName": "खस की टट्टी",
+      "category": "Passive Cooling",
+      "applicableTo": ["retrofit", "new"],
+      "description": "Wet khus grass screen over openings. Evaporation cools the incoming air.",
+      "heritage": "Khus tattis used in North Indian homes before air conditioning",
+      "effect": { "glazingShadingMult": 0.6 },
+      "unitCostInr": 400,
+      "costBasis": "glazing_m2",
+      "source": "Screen shading with evaporative cooling; needs regular watering"
+    },
+    {
+      "id": "clerestory-vent",
+      "name": "Clerestory Ventilator",
+      "hindiName": "रोशनदान",
+      "category": "Ventilation",
+      "applicableTo": ["retrofit", "new"],
+      "description": "High openings that let hot air escape and drive cross-ventilation.",
+      "heritage": "Roshandan high vents in traditional houses",
+      "effect": { "achAdd": 2.0 },
+      "unitCostInr": 6000,
+      "costBasis": "floor",
+      "source": "Typical stack-vent gain of 1-3 ACH"
+    }
+  ]
+}

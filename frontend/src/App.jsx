@@ -1,27 +1,18 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import BuildingScene from "./components/3d/BuildingScene";
 import ThermalSlider from "./components/ui/ThermalSlider";
+import { DEFAULT_BUILDING, analyse, annualImpact, buildGeometry, interventionCostInr } from "./engine/heatModel";
+import { interventionsFor } from "./engine/interventions";
+import { optimise, totalCostInr } from "./engine/optimizer";
 import "./App.css";
 
-const INTERVENTIONS = [
-  {
-    group: "Passive Cooling",
-    items: [
-      { id: "jali", name: "Jali Screen", desc: "Filters direct sunlight and reduces heat gain.", active: true },
-      { id: "shade", name: "Solar Shade", desc: "Reduces window exposure to sunlight." },
-    ],
-  },
-  {
-    group: "Materials",
-    items: [{ id: "terracotta", name: "Terracotta Wall", desc: "Reduces heat transfer through walls." }],
-  },
-  {
-    group: "Roof",
-    items: [{ id: "green-roof", name: "Green Roof", desc: "Reduces roof heat gain and improves insulation." }],
-  },
+const SCENARIOS = [
+  { id: "retrofit", label: "Retrofit existing building" },
+  { id: "new", label: "New build" },
 ];
 
 const level = (score) => (score >= 66 ? "HIGH" : score >= 33 ? "MEDIUM" : "LOW");
+const inr = (n) => "₹" + Math.round(n).toLocaleString("en-IN");
 
 /* 7-segment meter, like the mock */
 function Meter({ score }) {
@@ -36,20 +27,57 @@ function Meter({ score }) {
 }
 
 function App() {
-  const [thermalScore, setThermalScore] = useState(100);
+  const [building, setBuilding] = useState(DEFAULT_BUILDING);
+  const [active, setActive] = useState([]);
+  const [overrideScore, setOverrideScore] = useState(null);
   const [tintOpacity, setTintOpacity] = useState(0.58);
-  const [showJali, setShowJali] = useState(true);
   const [showControls, setShowControls] = useState(false);
+  const [recommendation, setRecommendation] = useState(null);
 
-  // placeholder maths – replace with real simulation later
-  const heatRisk = Math.round(thermalScore * 0.72);
-  const heatRiskAfter = showJali ? Math.round(heatRisk * 0.8) : heatRisk;
-  const improvement = heatRisk ? Math.round(((heatRisk - heatRiskAfter) / heatRisk) * 100) : 0;
-  const surfaceTemp = Math.round(30 + thermalScore * 0.11);
+  const candidates = useMemo(() => interventionsFor(building.scenario), [building.scenario]);
+  // Drop interventions that don't fit the chosen scenario, e.g. rat-trap walls after switching to retrofit.
+  const applied = useMemo(
+    () => active.filter((id) => candidates.some((c) => c.id === id)),
+    [active, candidates]
+  );
 
-  const handleCardClick = (id) => {
-    if (id === "jali") setShowJali((p) => !p);
+  const baseline = useMemo(() => analyse(building, []), [building]);
+  const current = useMemo(() => analyse(building, applied), [building, applied]);
+  const impact = useMemo(() => annualImpact(building, applied, baseline), [building, applied, baseline]);
+  const appliedCostInr = totalCostInr(building, applied);
+  const paybackYears = impact.savedInr > 0 ? appliedCostInr / impact.savedInr : null;
+
+  const thermalScore = overrideScore ?? current.thermalScore;
+
+  const updateBuilding = (patch) => {
+    setBuilding((b) => ({ ...b, ...patch }));
+    setOverrideScore(null);
   };
+
+  const toggle = (id) => {
+    setOverrideScore(null);
+    setActive((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
+  };
+
+  const runOptimiser = () => {
+    const result = optimise(building);
+    setRecommendation(result);
+    if (result.best) {
+      setActive(result.best.ids);
+      setOverrideScore(null);
+    }
+  };
+
+  const reset = () => {
+    setBuilding(DEFAULT_BUILDING);
+    setActive([]);
+    setOverrideScore(null);
+    setTintOpacity(0.58);
+    setRecommendation(null);
+  };
+
+  const groups = [...new Set(candidates.map((c) => c.category))];
+  const nameOf = (id) => candidates.find((c) => c.id === id)?.name ?? id;
 
   return (
     <div className="vayu-app">
@@ -64,14 +92,7 @@ function App() {
           <button className="btn ghost" onClick={() => setShowControls((p) => !p)}>
             Dev controls
           </button>
-          <button
-            className="btn ghost"
-            onClick={() => {
-              setThermalScore(100);
-              setTintOpacity(0.58);
-              setShowJali(false);
-            }}
-          >
+          <button className="btn ghost" onClick={reset}>
             ↻ Reset
           </button>
           <button className="btn solid">⤓ Export</button>
@@ -80,33 +101,81 @@ function App() {
 
       {/* ---------- BODY: 3 COLUMNS ---------- */}
       <div className="vayu-body">
-        {/* LEFT: interventions */}
+        {/* LEFT: project + interventions */}
         <aside className="panel panel-left">
-          <h2 className="panel-title">Interventions</h2>
+          <h2 className="panel-title">Project</h2>
+          <div className="card project-form">
+            <label className="field">
+              <span>Building type</span>
+              <select value={building.scenario} onChange={(e) => updateBuilding({ scenario: e.target.value })}>
+                {SCENARIOS.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="field">
+              <span>Floors</span>
+              <input
+                type="number"
+                min="1"
+                max="5"
+                value={building.floors}
+                onChange={(e) => updateBuilding({ floors: Math.max(1, Number(e.target.value) || 1) })}
+              />
+            </label>
+            <label className="field">
+              <span>Footprint per floor (m²)</span>
+              <input
+                type="number"
+                min="20"
+                step="10"
+                value={building.footprintM2}
+                onChange={(e) => updateBuilding({ footprintM2: Math.max(20, Number(e.target.value) || 20) })}
+              />
+            </label>
+            <label className="field">
+              <span>Budget (₹)</span>
+              <input
+                type="number"
+                min="0"
+                step="10000"
+                value={building.budgetInr}
+                onChange={(e) => updateBuilding({ budgetInr: Math.max(0, Number(e.target.value) || 0) })}
+              />
+            </label>
+            <button className="btn solid rec-btn" onClick={runOptimiser}>
+              Recommend best within budget
+            </button>
+          </div>
+
+          <h2 className="panel-title interventions-title">Interventions</h2>
           <p className="panel-sub">Click to apply to the building</p>
 
-          {INTERVENTIONS.map((g) => (
-            <section key={g.group} className="int-group">
-              <h3 className="group-label">{g.group}</h3>
-              {g.items.map((it) => {
-                const locked = it.id !== "jali";
-                const active = it.id === "jali" && showJali;
-                return (
-                  <button
-                    key={it.id}
-                    className={`int-card ${active ? "active" : ""} ${locked ? "locked" : ""}`}
-                    onClick={() => !locked && handleCardClick(it.id)}
-                    disabled={locked}
-                  >
-                    <div className="int-thumb" />
-                    <div className="int-text">
-                      <strong>{it.name}</strong>
-                      <span>{it.desc}</span>
-                      <em>{locked ? "🔒 Coming soon" : active ? "Applied" : "Click to apply"}</em>
-                    </div>
-                  </button>
-                );
-              })}
+          {groups.map((group) => (
+            <section key={group} className="int-group">
+              <h3 className="group-label">{group}</h3>
+              {candidates
+                .filter((c) => c.category === group)
+                .map((it) => {
+                  const on = applied.includes(it.id);
+                  const cost = interventionCostInr(it, building, buildGeometry(building, [it.id]));
+                  return (
+                    <button key={it.id} className={`int-card ${on ? "active" : ""}`} onClick={() => toggle(it.id)}>
+                      <div className="int-thumb" />
+                      <div className="int-text">
+                        <strong>
+                          {it.name} <small className="hindi">{it.hindiName}</small>
+                        </strong>
+                        <span>{it.description}</span>
+                        <em>
+                          {on ? "Applied" : "Click to apply"} · est. {inr(cost)}
+                        </em>
+                      </div>
+                    </button>
+                  );
+                })}
             </section>
           ))}
         </aside>
@@ -114,17 +183,21 @@ function App() {
         {/* CENTRE: viewport */}
         <main className="vayu-center">
           <div className="vayu-viewport">
-            <BuildingScene thermalScore={thermalScore} tintOpacity={tintOpacity} showJali={showJali} />
+            <BuildingScene
+              thermalScore={thermalScore}
+              tintOpacity={tintOpacity}
+              showJali={applied.includes("jali")}
+            />
           </div>
           {showControls && (
             <div className="dev-controls">
               <ThermalSlider
                 value={thermalScore}
-                onChange={setThermalScore}
+                onChange={setOverrideScore}
                 opacity={tintOpacity}
                 onOpacityChange={setTintOpacity}
-                showJali={showJali}
-                onToggleJali={() => setShowJali((p) => !p)}
+                showJali={applied.includes("jali")}
+                onToggleJali={() => toggle("jali")}
               />
             </div>
           )}
@@ -137,46 +210,95 @@ function App() {
           <div className="card">
             <div className="metric">
               <span className="metric-label">Solar Exposure</span>
-              <span className="metric-value hot">{level(thermalScore)}</span>
-              <Meter score={thermalScore} />
-            </div>
-            <div className="metric">
-              <span className="metric-label">Heat Risk</span>
-              <span className="metric-value">
-                {heatRisk} <small>/ 100</small>
+              <span className={`metric-value ${level(thermalScore) === "HIGH" ? "hot" : ""}`}>
+                {level(thermalScore)}
               </span>
-              <div className="bar"><div className="bar-fill" style={{ width: `${heatRisk}%` }} /></div>
+              <Meter score={thermalScore} />
             </div>
             <div className="metric">
-              <span className="metric-label">Cooling Demand</span>
-              <span className="metric-value hot">{level(thermalScore)}</span>
-              <Meter score={thermalScore} />
+              <span className="metric-label">Indoor peak temperature</span>
+              <span className="metric-value">
+                {current.indoorPeakC.toFixed(1)} <small>°C</small>
+              </span>
+              <div className="bar">
+                <div className="bar-fill" style={{ width: `${Math.min(100, ((current.indoorPeakC - 28) / 20) * 100)}%` }} />
+              </div>
+            </div>
+            <div className="metric">
+              <span className="metric-label">Cooling demand (est.)</span>
+              <span className="metric-value">
+                {Math.round(impact.coolingKwh).toLocaleString("en-IN")} <small>kWh / yr</small>
+              </span>
             </div>
           </div>
 
           <h3 className="group-label impact-title">Impact</h3>
-          <p className="panel-sub">Estimated improvement after applying intervention</p>
+          <p className="panel-sub">Compared with the building as it is today</p>
 
           <div className="card">
             <div className="metric">
-              <span className="metric-label">Heat Risk</span>
+              <span className="metric-label">Indoor peak</span>
               <span className="metric-value">
-                {heatRisk} → {heatRiskAfter}
-                {showJali && <span className="delta">↓ {improvement}%</span>}
+                {baseline.indoorPeakC.toFixed(1)} → {current.indoorPeakC.toFixed(1)} <small>°C</small>
+                {applied.length > 0 && (
+                  <span className="delta">
+                    ↓ {(baseline.indoorPeakC - current.indoorPeakC).toFixed(1)} °C
+                  </span>
+                )}
               </span>
-              <div className="bar"><div className="bar-fill" style={{ width: `${heatRiskAfter}%` }} /></div>
             </div>
-            {showJali && <div className="toast">✓ Jali Screen added</div>}
+            <div className="metric">
+              <span className="metric-label">Annual saving</span>
+              <span className="metric-value">
+                {inr(impact.savedInr)} <small>/ yr</small>
+              </span>
+            </div>
+            <div className="metric">
+              <span className="metric-label">CO₂ avoided</span>
+              <span className="metric-value">
+                {(impact.savedCo2Kg / 1000).toFixed(2)} <small>t / yr</small>
+              </span>
+            </div>
+            <div className="metric">
+              <span className="metric-label">Cost of applied set</span>
+              <span className="metric-value">
+                {inr(appliedCostInr)}
+                {paybackYears !== null && <small> · payback {paybackYears.toFixed(1)} yrs</small>}
+              </span>
+            </div>
+            {applied.length > 0 && (
+              <div className="toast">✓ {applied.map(nameOf).join(", ")}</div>
+            )}
           </div>
+
+          {recommendation && (
+            <div className="card rec-card">
+              <div className="metric">
+                <span className="metric-label">Best within {inr(building.budgetInr)}</span>
+                {recommendation.best ? (
+                  <>
+                    <span className="metric-value">
+                      {recommendation.best.ids.length ? recommendation.best.ids.map(nameOf).join(" + ") : "Nothing needed"}
+                    </span>
+                    <span className="metric-label">
+                      Saves {inr(recommendation.best.savedInr)} / yr · peak {recommendation.best.indoorPeakC.toFixed(1)} °C
+                    </span>
+                  </>
+                ) : (
+                  <span className="metric-label">No combination fits this budget.</span>
+                )}
+              </div>
+            </div>
+          )}
         </aside>
       </div>
 
       {/* ---------- FOOTER STATUS BAR ---------- */}
       <footer className="vayu-footer">
         <div className="stat"><span className="stat-label">Solar exposure</span><strong>{level(thermalScore)}</strong></div>
-        <div className="stat"><span className="stat-label">Estimated surface temp.</span><strong>{surfaceTemp}°C</strong></div>
-        <div className="stat"><span className="stat-label">Natural ventilation</span><strong>Moderate</strong></div>
-        <div className="hint">ⓘ Select an intervention to apply it to the facade</div>
+        <div className="stat"><span className="stat-label">Indoor peak</span><strong>{current.indoorPeakC.toFixed(1)}°C</strong></div>
+        <div className="stat"><span className="stat-label">Air changes / hr</span><strong>{current.achTotal.toFixed(1)}</strong></div>
+        <div className="hint">ⓘ Estimates from a simplified model. Costs are rough, pending CPWD DSR check.</div>
       </footer>
     </div>
   );

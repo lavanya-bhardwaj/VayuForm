@@ -1,0 +1,22 @@
+{
+  "_note": "Design-day values for New Delhi, mid-May afternoon peak. Simplified: each surface is taken at its own peak irradiance (not simultaneous), which makes the result a conservative worst case. Replace with values processed from the ISHRAE New Delhi EPW file when available.",
+  "location": "New Delhi (NCR)",
+  "outdoorPeakC": 44,
+  "indoorComfortC": 28,
+  "solarPeakWm2": { "N": 150, "E": 550, "S": 350, "W": 650, "roof": 900 },
+  "surfaceHeatTransferCoeffWm2K": 17,
+  "airDensityTimesSpecificHeat": 1206,
+  "storeyHeightM": 3.2,
+  "calibration": {
+    "_note": "Lumped-capacitance term that stands in for thermal mass and conduction to the indoor air. Tuned so an unshaded 2-storey brick house peaks near 39 °C indoors. Replace with a proper dynamic simulation later.",
+    "lumpedHeatLossWm2K": 25,
+    "baseAchPerHour": 1.0,
+    "scoreRange": { "minGainWm2Floor": 50, "maxGainWm2Floor": 300 }
+  },
+  "energy": {
+    "_note": "Assumed unconditioned baseline cooling demand, scaled by the change in heat gain. Assumption, not measured data.",
+    "baselineCoolingKwhPerM2Yr": 45,
+    "tariffInrPerKwh": 7.5,
+    "gridCo2KgPerKwh": 0.71
+  }
+}
