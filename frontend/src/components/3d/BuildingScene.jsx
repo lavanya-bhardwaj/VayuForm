@@ -583,7 +583,7 @@ export default function BuildingScene({
   }, [thermalMaterials]);
 
   return (
-    <div style={{ width: "100%", height: "650px", background: "#d8e1e8", position: "relative" }}>
+<div style={{ width: "100%", height: "100%", background: "#d8e1e8", position: "relative" }}>
       <Canvas shadows="percentage" 
         onPointerMissed={() => setSelectedJali(false)}
         dpr={[1, 2]}
