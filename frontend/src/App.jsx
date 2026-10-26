@@ -218,6 +218,7 @@ function App() {
               showJali={applied.includes("jali")}
               showChhajja={applied.includes("chhajja")}
               showKhusChik={applied.includes("khus-chik")}
+              hasCoolRoof={applied.includes("lime-cool-roof")}
             />
           </div>
           {showControls && (

@@ -372,7 +372,7 @@ function SideAndBackFaces({ building = {}, palette }) {
 
 /* -------------------- ROOF -------------------- */
 
-function Roof({ palette }) {
+function Roof({ palette, hasCoolRoof = false }) {
   const contextPalette = useBuildingPalette();
   const pal = palette || contextPalette;
   const y = ROOF - 0.2;
@@ -385,8 +385,14 @@ function Roof({ palette }) {
       <Box p={[(-5.25 + X_BAY) / 2, y, (4.3 - 3.95) / 2]} s={[X_BAY + 5.25, 0.4, 4.3 + 3.95]} color={pal.charcoal} />
       <Box p={[(X_BAY + 5.25) / 2, y, (2.45 - 3.95) / 2]} s={[5.25 - X_BAY, 0.4, 2.45 + 3.95]} color={pal.charcoal} />
 
-      {/* roof deck (subtle solar thermal wash) */}
-      <Box p={[0, ROOF + 0.01, -0.7]} s={[10.3, 0.03, 7.4]} material={pal.roofDeckMat} cast={false} />
+      {/* roof deck (subtle solar thermal wash) or cool-roof whitewash */}
+      <Box
+        p={[0, ROOF + 0.01, -0.7]}
+        s={[10.3, 0.03, 7.4]}
+        material={hasCoolRoof ? undefined : pal.roofDeckMat}
+        color={hasCoolRoof ? "#f5f3f0" : undefined}
+        cast={false}
+      />
 
       {/* parapet – follows the stepped footprint (thermal wall gradient tint) */}
       <Box p={[-0.1, py, 4.15]} s={[10.1 - 4.2 + 0.1, PARAPET, pt]} material={pal.wallMat} /> {/* front, left bay */}
@@ -527,7 +533,7 @@ function SkyDome() {
 
 /* -------------------- BUILDING -------------------- */
 
-export function Building({ building = {}, palette }) {
+export function Building({ building = {}, palette, hasCoolRoof = false }) {
   const contextPalette = useBuildingPalette();
   const pal = palette || contextPalette;
 
@@ -537,7 +543,7 @@ export function Building({ building = {}, palette }) {
       <LeftBayFacade building={building} palette={pal} />
       <RightBayFacade building={building} palette={pal} />
       <SideAndBackFaces building={building} palette={pal} />
-      <Roof palette={pal} />
+      <Roof palette={pal} hasCoolRoof={hasCoolRoof} />
     </group>
   );
 }
@@ -554,6 +560,7 @@ export default function BuildingScene({
   chhajaProps,
   showKhusChik = true,
   khusChikProps,
+  hasCoolRoof = false,
 }) {
   const [selectedJali, setSelectedJali] = useState(false);
   const [selectedChhajjaId, setSelectedChhajjaId] = useState(null);
@@ -649,7 +656,7 @@ export default function BuildingScene({
 
           <Ground palette={palette} />
           <Landscape />
-          <Building building={building} palette={palette} />
+          <Building building={building} palette={palette} hasCoolRoof={hasCoolRoof} />
 
           {/* First Passive-Cooling Retrofit Intervention: Terracotta Diamond Jali Screen */}
           {showJali && (
