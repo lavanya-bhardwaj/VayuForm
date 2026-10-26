@@ -578,8 +578,14 @@ export default function BuildingScene({
   }, [building]);
 
   const greenRoofConfigs = [
-    { id: "greenroof-1", pos: [-1.5, 9.0, 0.5] },
-    { id: "greenroof-2", pos: [2.0, 9.0, -1.5] },
+    { id: "greenroof-1", pos: [-3.0, 9.0, 2.0] },
+    { id: "greenroof-2", pos: [-0.5, 9.0, 2.5] },
+    { id: "greenroof-3", pos: [2.0, 9.0, 1.5] },
+    { id: "greenroof-4", pos: [-3.5, 9.0, -0.5] },
+    { id: "greenroof-5", pos: [0.5, 9.0, -0.5] },
+    { id: "greenroof-6", pos: [3.0, 9.0, -2.0] },
+    { id: "greenroof-7", pos: [-1.5, 9.0, -2.5] },
+    { id: "greenroof-8", pos: [1.5, 9.0, 0.0] },
   ];
 
   // Create gradient materials once
