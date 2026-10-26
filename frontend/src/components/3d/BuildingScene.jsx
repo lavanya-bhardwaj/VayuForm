@@ -80,6 +80,13 @@ function Box({ p, s, color, material, rough, metal, rot, cast = true, receive = 
   );
 }
 
+/* -------------------- PARAMETRIC SCALING -------------------- */
+
+function getWindowWidthScale(building) {
+  const baselineWwr = 0.2; // model designed for 20% wwr
+  return building.wwr / baselineWwr;
+}
+
 /* -------------------- WINDOW --------------------
    Sits on the wall surface: local +Z points out of the wall.
    `p` is the centre of the opening. Rotate the group to put it on other faces. */
@@ -164,10 +171,11 @@ function Walls({ palette }) {
 
 /* -------------------- LEFT BAY FACADE -------------------- */
 
-function LeftBayFacade({ palette }) {
+function LeftBayFacade({ building = {}, palette }) {
   const contextPalette = useBuildingPalette();
   const pal = palette || contextPalette;
   const zf = Z_FRONT;
+  const wScale = getWindowWidthScale(building);
   return (
     <group>
       {/* tall corner fin (dark structural charcoal) */}
@@ -191,11 +199,11 @@ function LeftBayFacade({ palette }) {
       <Box p={[-1.4, 6.35, zf + 0.08]} s={[4.5, 0.1, 0.16]} material={pal.wallLightMat} />
 
       {/* top-floor windows */}
-      <Window p={[-2.42, 7.2, zf]} w={1.17} h={1.45} palette={pal} />
-      <Window p={[-0.37, 7.2, zf]} w={1.0} h={1.45} palette={pal} />
+      <Window p={[-2.42, 7.2, zf]} w={1.17 * wScale} h={1.45} palette={pal} />
+      <Window p={[-0.37, 7.2, zf]} w={1.0 * wScale} h={1.45} palette={pal} />
 
       {/* ground-floor window */}
-      <Window p={[-2.5, 1.65, zf]} w={1.0} h={1.4} palette={pal} />
+      <Window p={[-2.5, 1.65, zf]} w={1.0 * wScale} h={1.4} palette={pal} />
 
       {/* entrance: recessed surround + double door */}
       <Box p={[-0.6, 1.28, zf + 0.07]} s={[2.1, 2.56, 0.14]} color={pal.charcoal} />
@@ -217,13 +225,14 @@ function LeftBayFacade({ palette }) {
 
 /* -------------------- RIGHT BAY: BALCONIES + CARPORT -------------------- */
 
-function RightBayFacade({ palette }) {
+function RightBayFacade({ building = {}, palette }) {
   const contextPalette = useBuildingPalette();
   const pal = palette || contextPalette;
   const wallZ = Z_RECESS;
   const slabFront = Z_FRONT; // balcony slabs reach the plane of the left bay
   const balconyWidth = X_RIGHT - X_BAY;
   const balconyDepth = slabFront - wallZ;
+  const wScale = getWindowWidthScale(building);
 
   return (
     <group>
@@ -239,10 +248,10 @@ function RightBayFacade({ palette }) {
         s={[balconyWidth, 0.18, 0.1]}
         material={pal.wallLightMat}
       />
-      
+
       {/* Front Railing */}
       <Railing p={[2.85, FLOOR_2, slabFront - 0.1]} length={3.8} topColor="#9a6b44" palette={pal} />
-      
+
       {/* Left & Right Side Railings (Second Floor) */}
       <Railing
         p={[X_BAY + 0.1, FLOOR_2, (wallZ + slabFront) / 2]}
@@ -265,7 +274,7 @@ function RightBayFacade({ palette }) {
         s={[6.3 - X_BAY, 0.5, CARPORT_FRONT - wallZ]}
         color={pal.charcoal}
       />
-      
+
       {/* Front Railing */}
       <Railing p={[2.85, FLOOR_1, slabFront - 0.1]} length={3.8} palette={pal} />
 
@@ -291,13 +300,13 @@ function RightBayFacade({ palette }) {
       />
 
       {/* ---- Balcony doors (floors 1 and 2) ---- */}
-      <Window p={[1.6, FLOOR_2 + 1.1, wallZ]} w={1.0} h={2.0} palette={pal} />
-      <Window p={[3.25, FLOOR_2 + 1.1, wallZ]} w={1.05} h={2.0} palette={pal} />
-      <Window p={[1.6, FLOOR_1 + 1.1, wallZ]} w={1.0} h={2.0} palette={pal} />
-      <Window p={[3.25, FLOOR_1 + 1.1, wallZ]} w={1.05} h={2.0} palette={pal} />
+      <Window p={[1.6, FLOOR_2 + 1.1, wallZ]} w={1.0 * wScale} h={2.0} palette={pal} />
+      <Window p={[3.25, FLOOR_2 + 1.1, wallZ]} w={1.05 * wScale} h={2.0} palette={pal} />
+      <Window p={[1.6, FLOOR_1 + 1.1, wallZ]} w={1.0 * wScale} h={2.0} palette={pal} />
+      <Window p={[3.25, FLOOR_1 + 1.1, wallZ]} w={1.05 * wScale} h={2.0} palette={pal} />
 
       {/* ---- Carport (ground floor) ---- */}
-      <Window p={[1.96, 1.5, wallZ]} w={1.68} h={1.6} mullion={0.0} palette={pal} />
+      <Window p={[1.96, 1.5, wallZ]} w={1.68 * wScale} h={1.6} mullion={0.0} palette={pal} />
       {/* floor of carport */}
       <Box p={[3.6, 0.006, (wallZ + CARPORT_FRONT) / 2 + 0.1]} s={[5.4, 0.012, CARPORT_FRONT - wallZ]} color={pal.carportFloor} cast={false} />
       {/* front columns */}
@@ -315,10 +324,11 @@ function RightBayFacade({ palette }) {
 
 /* -------------------- SIDE & BACK FACES -------------------- */
 
-function SideAndBackFaces({ palette }) {
+function SideAndBackFaces({ building = {}, palette }) {
   const contextPalette = useBuildingPalette();
   const pal = palette || contextPalette;
   const levels = [1.65, FLOOR_1 + 1.5, FLOOR_2 + 1.5];
+  const wScale = getWindowWidthScale(building);
   const slats = [];
   for (let i = 0; i < 9; i++) {
     slats.push(
@@ -338,20 +348,20 @@ function SideAndBackFaces({ palette }) {
       <Box p={[X_LEFT - 0.025, 4.35, 1.75]} s={[0.05, 7.7, 2.3]} color={pal.wood} />
       {slats}
       {levels.map((y) => (
-        <Window key={`l${y}`} p={[X_LEFT, y, -2.75]} w={0.95} h={1.4} rot={[0, -Math.PI / 2, 0]} palette={pal} />
+        <Window key={`l${y}`} p={[X_LEFT, y, -2.75]} w={0.95 * wScale} h={1.4} rot={[0, -Math.PI / 2, 0]} palette={pal} />
       ))}
       {/* first-floor slab edge wrapping the left face */}
       <Box p={[X_LEFT - 0.06, 3.075, 0]} s={[0.12, 0.35, Z_FRONT - Z_BACK]} color={pal.charcoal} />
 
       {/* RIGHT FACE (+X) */}
       {levels.map((y) => (
-        <Window key={`r${y}`} p={[X_RIGHT, y, -1.2]} w={1.0} h={1.4} rot={[0, Math.PI / 2, 0]} palette={pal} />
+        <Window key={`r${y}`} p={[X_RIGHT, y, -1.2]} w={1.0 * wScale} h={1.4} rot={[0, Math.PI / 2, 0]} palette={pal} />
       ))}
 
       {/* BACK FACE (-Z) */}
       {levels.map((y) =>
         [-3.0, 0.2, 3.2].map((x) => (
-          <Window key={`b${y}${x}`} p={[x, y, Z_BACK]} w={1.2} h={1.4} rot={[0, Math.PI, 0]} palette={pal} />
+          <Window key={`b${y}${x}`} p={[x, y, Z_BACK]} w={1.2 * wScale} h={1.4} rot={[0, Math.PI, 0]} palette={pal} />
         ))
       )}
     </group>
@@ -515,16 +525,16 @@ function SkyDome() {
 
 /* -------------------- BUILDING -------------------- */
 
-export function Building({ palette }) {
+export function Building({ building = {}, palette }) {
   const contextPalette = useBuildingPalette();
   const pal = palette || contextPalette;
 
   return (
     <group>
       <Walls palette={pal} />
-      <LeftBayFacade palette={pal} />
-      <RightBayFacade palette={pal} />
-      <SideAndBackFaces palette={pal} />
+      <LeftBayFacade building={building} palette={pal} />
+      <RightBayFacade building={building} palette={pal} />
+      <SideAndBackFaces building={building} palette={pal} />
       <Roof palette={pal} />
     </group>
   );
@@ -533,6 +543,7 @@ export function Building({ palette }) {
 /* -------------------- SCENE -------------------- */
 
 export default function BuildingScene({
+  building = {},
   thermalScore = 100,
   tintOpacity = 0.58,
   showJali = true,
@@ -617,7 +628,7 @@ export default function BuildingScene({
 
           <Ground palette={palette} />
           <Landscape />
-          <Building palette={palette} />
+          <Building building={building} palette={palette} />
 
           {/* First Passive-Cooling Retrofit Intervention: Terracotta Diamond Jali Screen */}
           {showJali && (

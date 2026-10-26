@@ -9,6 +9,7 @@ import { validateConduction } from "./engine/validation_conduction";
 import { validateSolar } from "./engine/validation_solar";
 import { validateInterventions } from "./engine/validation_interventions";
 import { validateEconomics } from "./engine/validation_economics";
+import climate from "./data/climate/delhi.json";
 import "./App.css";
 
 const SCENARIOS = [
@@ -155,6 +156,23 @@ function App() {
                 onChange={(e) => updateBuilding({ budgetInr: Math.max(0, Number(e.target.value) || 0) })}
               />
             </label>
+            <label className="field">
+              <span>Window-to-wall ratio</span>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <input
+                  type="range"
+                  min="0.1"
+                  max="0.6"
+                  step="0.05"
+                  value={building.wwr}
+                  onChange={(e) => updateBuilding({ wwr: Number(e.target.value) })}
+                  style={{ flex: 1 }}
+                />
+                <span style={{ minWidth: '45px', fontSize: '0.9em', fontWeight: 'bold' }}>
+                  {(building.wwr * 100).toFixed(0)}%
+                </span>
+              </div>
+            </label>
             <button className="btn solid rec-btn" onClick={runOptimiser}>
               Recommend best within budget
             </button>
@@ -194,6 +212,7 @@ function App() {
         <main className="vayu-center">
           <div className="vayu-viewport">
             <BuildingScene
+              building={building}
               thermalScore={thermalScore}
               tintOpacity={tintOpacity}
               showJali={applied.includes("jali")}
@@ -224,6 +243,12 @@ function App() {
                 {level(thermalScore)}
               </span>
               <Meter score={thermalScore} />
+            </div>
+            <div className="metric">
+              <span className="metric-label">Outdoor peak temperature</span>
+              <span className="metric-value">
+                {climate.outdoorPeakC} <small>°C</small>
+              </span>
             </div>
             <div className="metric">
               <span className="metric-label">Indoor peak temperature</span>

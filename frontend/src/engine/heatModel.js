@@ -8,7 +8,7 @@ const COURTYARD_SHARE = 0.15;
 export const DEFAULT_BUILDING = {
   floors: 2,
   footprintM2: 100,
-  wwr: { N: 0.2, E: 0.2, S: 0.2, W: 0.2 },
+  wwr: 0.2,
   budgetInr: 300000,
   scenario: "retrofit",
 };
@@ -54,7 +54,7 @@ export function buildGeometry(building, ids) {
   const facades = {};
   for (const f of FACADES) {
     const grossM2 = side * climate.storeyHeightM * building.floors;
-    const glazingM2 = grossM2 * building.wwr[f];
+    const glazingM2 = grossM2 * building.wwr;
     facades[f] = { grossM2, glazingM2, wallM2: grossM2 - glazingM2 };
   }
   const grossFacadeM2 = FACADES.reduce((sum, f) => sum + facades[f].grossM2, 0);
