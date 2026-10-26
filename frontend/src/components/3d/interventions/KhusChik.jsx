@@ -122,6 +122,7 @@ export default function KhusChik({
     <group
       ref={groupRef}
       position={[posX, posY, posZ]}
+      rotation={wall === "left" || wall === "right" ? [0, Math.PI / 2, 0] : [0, 0, 0]}
       onPointerDown={handlePointerDown}
     >
       {/* BACKGROUND (drop shadow / gray backing) */}
