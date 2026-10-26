@@ -1,9 +1,14 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import BuildingScene from "./components/3d/BuildingScene";
 import ThermalSlider from "./components/ui/ThermalSlider";
 import { DEFAULT_BUILDING, analyse, annualImpact, buildGeometry, interventionCostInr } from "./engine/heatModel";
 import { interventionsFor } from "./engine/interventions";
 import { optimise, totalCostInr } from "./engine/optimizer";
+import { runValidation } from "./engine/validation";
+import { validateConduction } from "./engine/validation_conduction";
+import { validateSolar } from "./engine/validation_solar";
+import { validateInterventions } from "./engine/validation_interventions";
+import { validateEconomics } from "./engine/validation_economics";
 import "./App.css";
 
 const SCENARIOS = [
@@ -33,6 +38,11 @@ function App() {
   const [tintOpacity, setTintOpacity] = useState(0.58);
   const [showControls, setShowControls] = useState(false);
   const [recommendation, setRecommendation] = useState(null);
+
+  useEffect(() => {
+    // Run physics engine validation on startup
+    runValidation();
+  }, []);
 
   const candidates = useMemo(() => interventionsFor(building.scenario), [building.scenario]);
   // Drop interventions that don't fit the chosen scenario, e.g. rat-trap walls after switching to retrofit.
