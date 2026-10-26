@@ -161,6 +161,15 @@ export default function Jali({
       position={[posX, posY, posZ]}
       onPointerDown={handlePointerDown}
     >
+      {/* BACKGROUND (drop shadow / gray backing) */}
+      <mesh position={[0, 0, -0.1]}>
+        <boxGeometry args={[width + 0.1, height + 0.1, 0.05]} />
+        <meshStandardMaterial
+          color="#505050"
+          roughness={0.85}
+        />
+      </mesh>
+
       {/* JALI */}
       <mesh geometry={jaliGeometry}>
         <meshStandardMaterial
