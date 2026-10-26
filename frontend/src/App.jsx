@@ -108,13 +108,22 @@ function App() {
 
   return (
     <div className="vayu-app">
+      {/* ---------- SIDEBAR ---------- */}
+      <nav className="vayu-sidebar">
+        <button className="nav-item active">⌂ Home</button>
+        <button className="nav-item">▦ Explore Heat Map</button>
+        <button className="nav-item">▤ My Projects</button>
+        <button className="nav-item">ⓘ About</button>
+        <div className="sidebar-tagline">Sustainable architecture<br />for a cooler tomorrow.</div>
+      </nav>
+
       {/* ---------- HEADER ---------- */}
       <header className="vayu-header">
         <div className="vayu-brand">
           <span className="brand-main">VAYU</span>
           <span className="brand-accent">FORM</span>
         </div>
-        <div className="vayu-header-title">Passive Cooling Simulator</div>
+        <div className="vayu-header-title">Cooler Buildings. Healthier Cities.</div>
         <div className="vayu-header-actions">
           <button className="btn ghost" onClick={() => setShowControls((p) => !p)}>
             Dev controls
@@ -123,6 +132,8 @@ function App() {
             ↻ Reset
           </button>
           <button className="btn solid">⤓ Export</button>
+          <div className="location-chip">📍 Delhi, India</div>
+          <div className="avatar">◯</div>
         </div>
       </header>
 
