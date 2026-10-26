@@ -216,6 +216,7 @@ function App() {
               thermalScore={thermalScore}
               tintOpacity={tintOpacity}
               showJali={applied.includes("jali")}
+              showChhajja={applied.includes("chhajja")}
             />
           </div>
           {showControls && (
@@ -227,6 +228,8 @@ function App() {
                 onOpacityChange={setTintOpacity}
                 showJali={applied.includes("jali")}
                 onToggleJali={() => toggle("jali")}
+                showChhajja={applied.includes("chhajja")}
+                onToggleChhajja={() => toggle("chhajja")}
               />
             </div>
           )}

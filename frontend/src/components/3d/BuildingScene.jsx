@@ -12,6 +12,7 @@ import {
   useBuildingPalette,
 } from "../../context/BuildingPaletteContext";
 import Jali from "./interventions/Jali";
+import Chhajja from "./interventions/Chhajja";
 
 /* ==========================================================================
    VAYUFORM – BASE BUILDING MODEL
@@ -548,8 +549,11 @@ export default function BuildingScene({
   tintOpacity = 0.58,
   showJali = true,
   jaliProps,
+  showChhajja = true,
+  chhajaProps,
 }) {
   const [selectedJali, setSelectedJali] = useState(false);
+  const [selectedChhajja, setSelectedChhajja] = useState(false);
   // Create gradient materials once
   const thermalMaterials = useMemo(() => {
     const wallMat = createThermalGradientMaterial({
@@ -632,24 +636,37 @@ export default function BuildingScene({
 
           {/* First Passive-Cooling Retrofit Intervention: Terracotta Diamond Jali Screen */}
           {showJali && (
-            <Jali 
-            {...jaliProps} 
-            position={[-2.42, 5.25, 4.19]} 
-            width={3.0} 
-            height={4.7} 
-            depth={0.18} 
-            density={0.55} 
-            wallZ={Z_FRONT} 
-            selected={selectedJali} 
-            onSelect={() => setSelectedJali(true)} 
+            <Jali
+            {...jaliProps}
+            position={[-2.42, 5.25, 4.19]}
+            width={3.0}
+            height={4.7}
+            depth={0.18}
+            density={0.55}
+            wallZ={Z_FRONT}
+            selected={selectedJali}
+            onSelect={() => setSelectedJali(true)}
+            />
+          )}
+
+          {/* Second Passive-Cooling Retrofit Intervention: Deep Overhang Chhajja */}
+          {showChhajja && (
+            <Chhajja
+            {...chhajaProps}
+            position={[-2.42, 6.5, 4.19]}
+            width={3.0}
+            depth={1.0}
+            thickness={0.25}
+            selected={selectedChhajja}
+            onSelect={() => setSelectedChhajja(true)}
             />
           )}
 
           <OrbitControls
           target={[0.4, 4.9, 0]}
-          enablePan={!selectedJali}
-          enableRotate={!selectedJali}
-          enableZoom={!selectedJali}
+          enablePan={!selectedJali && !selectedChhajja}
+          enableRotate={!selectedJali && !selectedChhajja}
+          enableZoom={!selectedJali && !selectedChhajja}
           minDistance={8}
           maxDistance={45}
           minPolarAngle={Math.PI / 5}

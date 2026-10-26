@@ -7,6 +7,8 @@ export default function ThermalSlider({
   onOpacityChange,
   showJali = true,
   onToggleJali,
+  showChhajja = true,
+  onToggleChhajja,
 }) {
   const { top, bottom, accent } = getThermalGradientColors(value);
   const status = getThermalStatus(value);
@@ -104,7 +106,7 @@ export default function ThermalSlider({
 
         {typeof onToggleJali === "function" && (
           <div className="thermal-intervention-toggle-row">
-            <span className="thermal-opacity-label">Intervention:</span>
+            <span className="thermal-opacity-label">Interventions:</span>
             <button
               type="button"
               className={`jali-toggle-btn ${showJali ? "active" : ""}`}
@@ -112,8 +114,19 @@ export default function ThermalSlider({
               title="Toggle terracotta diamond jali screen visibility"
             >
               <span className="jali-toggle-icon" />
-              {showJali ? "3D Terracotta Jali (Active)" : "Jali Screen (Hidden)"}
+              {showJali ? "3D Jali (Active)" : "Jali (Hidden)"}
             </button>
+            {typeof onToggleChhajja === "function" && (
+              <button
+                type="button"
+                className={`jali-toggle-btn ${showChhajja ? "active" : ""}`}
+                onClick={onToggleChhajja}
+                title="Toggle deep overhang chhajja visibility"
+              >
+                <span className="jali-toggle-icon" />
+                {showChhajja ? "3D Chhajja (Active)" : "Chhajja (Hidden)"}
+              </button>
+            )}
           </div>
         )}
       </div>
