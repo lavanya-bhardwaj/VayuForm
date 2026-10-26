@@ -578,9 +578,8 @@ export default function BuildingScene({
   }, [building]);
 
   const greenRoofConfigs = [
-    { id: "greenroof-1", pos: [-2.5, 9.0, 1.5] },
-    { id: "greenroof-2", pos: [1.0, 9.0, -1.0] },
-    { id: "greenroof-3", pos: [-0.5, 9.0, 2.0] },
+    { id: "greenroof-1", pos: [-1.5, 9.0, 0.5] },
+    { id: "greenroof-2", pos: [2.0, 9.0, -1.5] },
   ];
 
   // Create gradient materials once
@@ -716,7 +715,9 @@ export default function BuildingScene({
             <GreenRoof
               key={config.id}
               position={config.pos}
-              size={0.8}
+              width={2.5}
+              depth={2.0}
+              plantSize={0.6}
               selected={selectedGreenRoofId === config.id}
               onSelect={() => setSelectedGreenRoofId(config.id)}
             />
