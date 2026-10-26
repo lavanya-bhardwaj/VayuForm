@@ -9,6 +9,7 @@ import { validateConduction } from "./engine/validation_conduction";
 import { validateSolar } from "./engine/validation_solar";
 import { validateInterventions } from "./engine/validation_interventions";
 import { validateEconomics } from "./engine/validation_economics";
+import { getSunTimes } from "./utils/sunPosition";
 import climate from "./data/climate/delhi.json";
 import "./App.css";
 
@@ -39,6 +40,10 @@ function App() {
   const [tintOpacity, setTintOpacity] = useState(0.58);
   const [showControls, setShowControls] = useState(false);
   const [recommendation, setRecommendation] = useState(null);
+
+  // Sun position: hour of day (0-24)
+  const { sunrise, sunset } = getSunTimes();
+  const [sunHour, setSunHour] = useState((sunrise + sunset) / 2); // midday
 
   useEffect(() => {
     // Run physics engine validation on startup
@@ -220,7 +225,29 @@ function App() {
               showKhusChik={applied.includes("khus-chik")}
               hasCoolRoof={applied.includes("lime-cool-roof")}
               showGreenRoof={applied.includes("green-roof")}
+              sunHour={sunHour}
             />
+          </div>
+
+          {/* Time slider */}
+          <div className="sun-slider-container">
+            <label className="sun-label">
+              <span>Time of Day</span>
+              <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+                <input
+                  type="range"
+                  min={sunrise.toFixed(2)}
+                  max={sunset.toFixed(2)}
+                  step="0.25"
+                  value={sunHour}
+                  onChange={(e) => setSunHour(Number(e.target.value))}
+                  style={{ flex: 1 }}
+                />
+                <span style={{ minWidth: "60px", fontSize: "0.9em", fontWeight: "bold" }}>
+                  {Math.floor(sunHour)}:{String(Math.round((sunHour % 1) * 60)).padStart(2, "0")}
+                </span>
+              </div>
+            </label>
           </div>
           {showControls && (
             <div className="dev-controls">

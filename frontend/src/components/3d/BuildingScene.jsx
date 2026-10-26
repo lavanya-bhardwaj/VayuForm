@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import * as THREE from "three";
-import { Canvas } from "@react-three/fiber";
+import { Canvas, useFrame } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
+import { getSunPosition, generateSunPath } from "../../utils/sunPosition";
 import {
   BASE_BUILDING_PALETTE,
   createThermalGradientMaterial,
@@ -532,6 +533,62 @@ function SkyDome() {
   );
 }
 
+/* -------------------- SUN COMPONENTS -------------------- */
+
+function SunPath({ sunHour }) {
+  const points = useMemo(() => generateSunPath(40), []);
+
+  if (points.length === 0) return null;
+
+  return (
+    <line>
+      <bufferGeometry>
+        <bufferAttribute
+          attach="attributes-position"
+          count={points.length}
+          array={new Float32Array(points.flat())}
+          itemSize={3}
+        />
+      </bufferGeometry>
+      <lineBasicMaterial color="#FFD700" linewidth={2} fog={false} />
+    </line>
+  );
+}
+
+function SunLight({ sunHour }) {
+  const sunPos = getSunPosition(sunHour);
+
+  return (
+    <>
+      {sunPos && (
+        <>
+          <directionalLight
+            position={[sunPos.x, sunPos.y, sunPos.z]}
+            intensity={sunPos.altitude > 0.3 ? 2.0 : 0.5}
+            color="#fff6ea"
+            castShadow
+            shadow-mapSize={[4096, 4096]}
+            shadow-camera-near={1}
+            shadow-camera-far={60}
+            shadow-camera-left={-16}
+            shadow-camera-right={16}
+            shadow-camera-top={16}
+            shadow-camera-bottom={-16}
+            shadow-bias={-0.0004}
+            shadow-normalBias={0.03}
+          />
+          {/* Fill light - softer from opposite side */}
+          <directionalLight
+            position={[-sunPos.x * 0.5, 5, -sunPos.z * 0.5]}
+            intensity={0.4}
+            color="#f2f5ff"
+          />
+        </>
+      )}
+    </>
+  );
+}
+
 /* -------------------- BUILDING -------------------- */
 
 export function Building({ building = {}, palette, hasCoolRoof = false }) {
@@ -563,6 +620,7 @@ export default function BuildingScene({
   khusChikProps,
   hasCoolRoof = false,
   showGreenRoof = true,
+  sunHour = 12,
 }) {
   const [selectedJali, setSelectedJali] = useState(false);
   const [selectedChhajjaId, setSelectedChhajjaId] = useState(null);
@@ -648,26 +706,15 @@ export default function BuildingScene({
           <SkyDome />
           <fog attach="fog" args={["#d8e1e8", 60, 170]} />
 
-          {/* soft sky/ground bounce + a warm key light */}
+          {/* soft sky/ground bounce + ambient light */}
           <hemisphereLight args={["#e8eef5", "#b0a692", 1.45]} />
           <ambientLight intensity={0.25} />
-          <directionalLight
-            position={[9, 16, 15]}
-            intensity={2.0}
-            color="#fff6ea"
-            castShadow
-            shadow-mapSize={[4096, 4096]}
-            shadow-camera-near={1}
-            shadow-camera-far={60}
-            shadow-camera-left={-16}
-            shadow-camera-right={16}
-            shadow-camera-top={16}
-            shadow-camera-bottom={-16}
-            shadow-bias={-0.0004}
-            shadow-normalBias={0.03}
-          />
-          {/* gentle fill so the left face never goes muddy */}
-          <directionalLight position={[-14, 7, 9]} intensity={0.55} color="#f2f5ff" />
+
+          {/* Dynamic sun lighting based on time of day */}
+          <SunLight sunHour={sunHour} />
+
+          {/* Sun path visualization */}
+          <SunPath sunHour={sunHour} />
 
           <Ground palette={palette} />
           <Landscape />
