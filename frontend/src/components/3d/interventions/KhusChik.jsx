@@ -8,6 +8,7 @@ export default function KhusChik({
   depth = 0.12,
   selected = false,
   onSelect,
+  wall = "front", // "front", "left", "right", "back"
 }) {
   const groupRef = useRef(null);
 
@@ -59,20 +60,39 @@ export default function KhusChik({
 
       const scaleFactor = 0.01;
 
-      const newX = originalX + deltaX * scaleFactor;
-      const newY = originalY - deltaY * scaleFactor;
+      if (wall === "left" || wall === "right") {
+        // Side walls: constrain Z (front-back) and Y (up-down)
+        const newZ = originalX + deltaX * scaleFactor; // Use Z for side walls
+        const newY = originalY - deltaY * scaleFactor;
 
-      groupRef.current.position.x = THREE.MathUtils.clamp(
-        newX,
-        -5 + width / 2,
-        5 - width / 2
-      );
+        groupRef.current.position.z = THREE.MathUtils.clamp(
+          newZ,
+          -3.75 + depth / 2,
+          3.75 - depth / 2
+        );
 
-      groupRef.current.position.y = THREE.MathUtils.clamp(
-        newY,
-        height / 2 + 0.5,
-        8.3 - height / 2
-      );
+        groupRef.current.position.y = THREE.MathUtils.clamp(
+          newY,
+          height / 2 + 0.5,
+          8.3 - height / 2
+        );
+      } else {
+        // Front/back walls: constrain X (left-right) and Y (up-down)
+        const newX = originalX + deltaX * scaleFactor;
+        const newY = originalY - deltaY * scaleFactor;
+
+        groupRef.current.position.x = THREE.MathUtils.clamp(
+          newX,
+          -5 + width / 2,
+          5 - width / 2
+        );
+
+        groupRef.current.position.y = THREE.MathUtils.clamp(
+          newY,
+          height / 2 + 0.5,
+          8.3 - height / 2
+        );
+      }
     };
 
     const handlePointerUp = () => {

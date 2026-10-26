@@ -689,6 +689,7 @@ export default function BuildingScene({
                 width={1.5}
                 height={3.0}
                 depth={0.12}
+                wall="left"
                 selected={selectedKhusChikId === "khus-chik"}
                 onSelect={() => setSelectedKhusChikId("khus-chik")}
               />
