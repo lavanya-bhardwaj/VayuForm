@@ -1,4 +1,4 @@
-import SunCalc from "suncalc";
+import * as SunCalc from "suncalc";
 
 // Delhi coordinates
 const DELHI_LAT = 28.7041;

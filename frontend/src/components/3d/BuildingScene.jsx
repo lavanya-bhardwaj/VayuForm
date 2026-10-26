@@ -713,9 +713,6 @@ export default function BuildingScene({
           {/* Dynamic sun lighting based on time of day */}
           <SunLight sunHour={sunHour} />
 
-          {/* Sun path visualization */}
-          <SunPath sunHour={sunHour} />
-
           <Ground palette={palette} />
           <Landscape />
           <Building building={building} palette={palette} hasCoolRoof={hasCoolRoof} />
