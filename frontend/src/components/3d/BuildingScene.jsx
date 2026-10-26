@@ -682,15 +682,17 @@ export default function BuildingScene({
 
           {/* Third Passive-Cooling Retrofit Intervention: Khus-chik Grass Screens */}
           {showKhusChik && (
-            <KhusChik
-              {...khusChikProps}
-              position={[-4.5, 4.0, 0]}
-              width={1.5}
-              height={3.0}
-              depth={0.12}
-              selected={selectedKhusChikId === "khus-chik"}
-              onSelect={() => setSelectedKhusChikId("khus-chik")}
-            />
+            <group rotation={[0, Math.PI / 2, 0]}>
+              <KhusChik
+                {...khusChikProps}
+                position={[-4.5, 4.0, 0]}
+                width={1.5}
+                height={3.0}
+                depth={0.12}
+                selected={selectedKhusChikId === "khus-chik"}
+                onSelect={() => setSelectedKhusChikId("khus-chik")}
+              />
+            </group>
           )}
 
           <OrbitControls
