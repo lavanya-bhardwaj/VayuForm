@@ -240,34 +240,74 @@ function App() {
             />
           </div>
 
-          {/* Time slider - collapsible */}
-          <div className="sun-slider-container" style={{ maxHeight: showSunSlider ? "120px" : "48px", overflow: "hidden", transition: "max-height 0.3s" }}>
+          {/* Time slider - compact sun icon */}
+          {!showSunSlider && (
             <button
-              className="sun-toggle-btn"
-              onClick={() => setShowSunSlider(!showSunSlider)}
-              style={{ width: "100%", padding: "12px", border: "none", background: "transparent", cursor: "pointer", textAlign: "left", fontWeight: "500", color: "#2b2623" }}
+              onClick={() => setShowSunSlider(true)}
+              style={{
+                position: "fixed",
+                bottom: "100px",
+                right: "20px",
+                width: "48px",
+                height: "48px",
+                borderRadius: "50%",
+                border: "none",
+                background: "rgba(255, 215, 0, 0.3)",
+                cursor: "pointer",
+                fontSize: "24px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                transition: "all 0.3s",
+                zIndex: 1000,
+              }}
+              onMouseEnter={(e) => e.target.style.background = "rgba(255, 215, 0, 0.5)"}
+              onMouseLeave={(e) => e.target.style.background = "rgba(255, 215, 0, 0.3)"}
             >
-              ☀️ Time of Day {showSunSlider ? "▼" : "▶"}
+              ☀️
             </button>
-            {showSunSlider && (
-              <div style={{ padding: "0 12px 12px 12px" }}>
-                <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
-                  <input
-                    type="range"
-                    min={sunrise.toFixed(2)}
-                    max={sunset.toFixed(2)}
-                    step="0.25"
-                    value={sunHour}
-                    onChange={(e) => setSunHour(Number(e.target.value))}
-                    style={{ flex: 1 }}
-                  />
-                  <span style={{ minWidth: "60px", fontSize: "0.9em", fontWeight: "bold" }}>
-                    {Math.floor(sunHour)}:{String(Math.round((sunHour % 1) * 60)).padStart(2, "0")}
-                  </span>
-                </div>
+          )}
+
+          {showSunSlider && (
+            <div
+              style={{
+                position: "fixed",
+                bottom: "100px",
+                right: "20px",
+                background: "var(--card)",
+                border: "1px solid var(--border)",
+                borderRadius: "12px",
+                padding: "16px",
+                minWidth: "300px",
+                boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+                zIndex: 1000,
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+                <span style={{ fontSize: "13px", fontWeight: "500", color: "#2b2623" }}>Time of Day</span>
+                <button
+                  onClick={() => setShowSunSlider(false)}
+                  style={{ border: "none", background: "transparent", cursor: "pointer", fontSize: "18px" }}
+                >
+                  ✕
+                </button>
               </div>
-            )}
-          </div>
+              <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+                <input
+                  type="range"
+                  min={sunrise.toFixed(2)}
+                  max={sunset.toFixed(2)}
+                  step="0.25"
+                  value={sunHour}
+                  onChange={(e) => setSunHour(Number(e.target.value))}
+                  style={{ flex: 1 }}
+                />
+                <span style={{ minWidth: "60px", fontSize: "0.9em", fontWeight: "bold", color: "#2b2623" }}>
+                  {Math.floor(sunHour)}:{String(Math.round((sunHour % 1) * 60)).padStart(2, "0")}
+                </span>
+              </div>
+            </div>
+          )}
           {showControls && (
             <div className="dev-controls">
               <ThermalSlider
