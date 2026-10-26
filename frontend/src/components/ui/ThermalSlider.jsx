@@ -9,6 +9,8 @@ export default function ThermalSlider({
   onToggleJali,
   showChhajja = true,
   onToggleChhajja,
+  showKhusChik = true,
+  onToggleKhusChik,
 }) {
   const { top, bottom, accent } = getThermalGradientColors(value);
   const status = getThermalStatus(value);
@@ -125,6 +127,17 @@ export default function ThermalSlider({
               >
                 <span className="jali-toggle-icon" />
                 {showChhajja ? "3D Chhajja (Active)" : "Chhajja (Hidden)"}
+              </button>
+            )}
+            {typeof onToggleKhusChik === "function" && (
+              <button
+                type="button"
+                className={`jali-toggle-btn ${showKhusChik ? "active" : ""}`}
+                onClick={onToggleKhusChik}
+                title="Toggle khus-chik grass screen visibility"
+              >
+                <span className="jali-toggle-icon" />
+                {showKhusChik ? "3D Khus-chik (Active)" : "Khus-chik (Hidden)"}
               </button>
             )}
           </div>

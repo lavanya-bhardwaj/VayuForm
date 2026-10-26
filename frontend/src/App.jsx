@@ -217,6 +217,7 @@ function App() {
               tintOpacity={tintOpacity}
               showJali={applied.includes("jali")}
               showChhajja={applied.includes("chhajja")}
+              showKhusChik={applied.includes("khus-chik")}
             />
           </div>
           {showControls && (
@@ -230,6 +231,8 @@ function App() {
                 onToggleJali={() => toggle("jali")}
                 showChhajja={applied.includes("chhajja")}
                 onToggleChhajja={() => toggle("chhajja")}
+                showKhusChik={applied.includes("khus-chik")}
+                onToggleKhusChik={() => toggle("khus-chik")}
               />
             </div>
           )}

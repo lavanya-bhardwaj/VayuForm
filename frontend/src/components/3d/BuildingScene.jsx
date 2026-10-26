@@ -13,6 +13,7 @@ import {
 } from "../../context/BuildingPaletteContext";
 import Jali from "./interventions/Jali";
 import Chhajja from "./interventions/Chhajja";
+import KhusChik from "./interventions/KhusChik";
 
 /* ==========================================================================
    VAYUFORM – BASE BUILDING MODEL
@@ -551,9 +552,12 @@ export default function BuildingScene({
   jaliProps,
   showChhajja = true,
   chhajaProps,
+  showKhusChik = true,
+  khusChikProps,
 }) {
   const [selectedJali, setSelectedJali] = useState(false);
   const [selectedChhajjaId, setSelectedChhajjaId] = useState(null);
+  const [selectedKhusChikId, setSelectedKhusChikId] = useState(null);
 
   const chhajaConfigs = useMemo(() => {
     const wScale = getWindowWidthScale(building);
@@ -612,6 +616,7 @@ export default function BuildingScene({
         onPointerMissed={() => {
           setSelectedJali(false);
           setSelectedChhajjaId(null);
+          setSelectedKhusChikId(null);
         }}
         dpr={[1, 2]}
         camera={{ position: [-10, 3.0, 28.5], fov: 30, near: 0.1, far: 1000 }}
@@ -675,11 +680,24 @@ export default function BuildingScene({
             />
           ))}
 
+          {/* Third Passive-Cooling Retrofit Intervention: Khus-chik Grass Screens */}
+          {showKhusChik && (
+            <KhusChik
+              {...khusChikProps}
+              position={[-2.42, 5.25, 4.19]}
+              width={3.0}
+              height={4.7}
+              depth={0.12}
+              selected={selectedKhusChikId === "khus-chik"}
+              onSelect={() => setSelectedKhusChikId("khus-chik")}
+            />
+          )}
+
           <OrbitControls
           target={[0.4, 4.9, 0]}
-          enablePan={!selectedJali && !selectedChhajjaId}
-          enableRotate={!selectedJali && !selectedChhajjaId}
-          enableZoom={!selectedJali && !selectedChhajjaId}
+          enablePan={!selectedJali && !selectedChhajjaId && !selectedKhusChikId}
+          enableRotate={!selectedJali && !selectedChhajjaId && !selectedKhusChikId}
+          enableZoom={!selectedJali && !selectedChhajjaId && !selectedKhusChikId}
           minDistance={8}
           maxDistance={45}
           minPolarAngle={Math.PI / 5}
