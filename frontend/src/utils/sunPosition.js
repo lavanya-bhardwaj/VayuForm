@@ -59,3 +59,27 @@ export function generateSunPath(numPoints = 40) {
 
   return points;
 }
+
+export function getOutdoorTemperature(hourOfDay, peakTemp = 44) {
+  const { sunrise, sunset } = getSunTimes();
+
+  // Temperature follows a sine curve from sunrise to sunset
+  // Peak around 2-3 PM (14-15 hours)
+  const peakHour = 14.5;
+  const minTemp = 32; // minimum at sunrise/sunset
+
+  if (hourOfDay < sunrise || hourOfDay > sunset) {
+    return minTemp;
+  }
+
+  // Normalized position in day (0 to 1)
+  const dayLength = sunset - sunrise;
+  const positionInDay = (hourOfDay - sunrise) / dayLength;
+  const peakPosition = (peakHour - sunrise) / dayLength;
+
+  // Sine curve: min at edges, max at peak
+  const tempFraction = Math.sin(positionInDay * Math.PI);
+  const temp = minTemp + tempFraction * (peakTemp - minTemp);
+
+  return Math.round(temp * 10) / 10; // Round to 1 decimal
+}

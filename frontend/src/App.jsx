@@ -9,7 +9,7 @@ import { validateConduction } from "./engine/validation_conduction";
 import { validateSolar } from "./engine/validation_solar";
 import { validateInterventions } from "./engine/validation_interventions";
 import { validateEconomics } from "./engine/validation_economics";
-import { getSunTimes } from "./utils/sunPosition";
+import { getSunTimes, getOutdoorTemperature } from "./utils/sunPosition";
 import climate from "./data/climate/delhi.json";
 import "./App.css";
 
@@ -44,6 +44,7 @@ function App() {
   // Sun position: hour of day (0-24)
   const { sunrise, sunset } = getSunTimes();
   const [sunHour, setSunHour] = useState((sunrise + sunset) / 2); // midday
+  const [showSunSlider, setShowSunSlider] = useState(false);
 
   useEffect(() => {
     // Run physics engine validation on startup
@@ -64,6 +65,16 @@ function App() {
   const paybackYears = impact.savedInr > 0 ? appliedCostInr / impact.savedInr : null;
 
   const thermalScore = overrideScore ?? current.thermalScore;
+
+  // Calculate time-dependent outdoor temperature
+  const currentOutdoorTemp = getOutdoorTemperature(sunHour);
+  const adjustedCurrent = useMemo(() => {
+    const adjusted = { ...current };
+    // Scale indoor peak based on outdoor temperature change
+    const tempDelta = currentOutdoorTemp - climate.outdoorPeakC;
+    adjusted.indoorPeakC = current.indoorPeakC + tempDelta;
+    return adjusted;
+  }, [sunHour, current, currentOutdoorTemp]);
 
   const updateBuilding = (patch) => {
     setBuilding((b) => ({ ...b, ...patch }));
@@ -229,25 +240,33 @@ function App() {
             />
           </div>
 
-          {/* Time slider */}
-          <div className="sun-slider-container">
-            <label className="sun-label">
-              <span>Time of Day</span>
-              <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
-                <input
-                  type="range"
-                  min={sunrise.toFixed(2)}
-                  max={sunset.toFixed(2)}
-                  step="0.25"
-                  value={sunHour}
-                  onChange={(e) => setSunHour(Number(e.target.value))}
-                  style={{ flex: 1 }}
-                />
-                <span style={{ minWidth: "60px", fontSize: "0.9em", fontWeight: "bold" }}>
-                  {Math.floor(sunHour)}:{String(Math.round((sunHour % 1) * 60)).padStart(2, "0")}
-                </span>
+          {/* Time slider - collapsible */}
+          <div className="sun-slider-container" style={{ maxHeight: showSunSlider ? "120px" : "48px", overflow: "hidden", transition: "max-height 0.3s" }}>
+            <button
+              className="sun-toggle-btn"
+              onClick={() => setShowSunSlider(!showSunSlider)}
+              style={{ width: "100%", padding: "12px", border: "none", background: "transparent", cursor: "pointer", textAlign: "left", fontWeight: "500", color: "#2b2623" }}
+            >
+              ☀️ Time of Day {showSunSlider ? "▼" : "▶"}
+            </button>
+            {showSunSlider && (
+              <div style={{ padding: "0 12px 12px 12px" }}>
+                <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+                  <input
+                    type="range"
+                    min={sunrise.toFixed(2)}
+                    max={sunset.toFixed(2)}
+                    step="0.25"
+                    value={sunHour}
+                    onChange={(e) => setSunHour(Number(e.target.value))}
+                    style={{ flex: 1 }}
+                  />
+                  <span style={{ minWidth: "60px", fontSize: "0.9em", fontWeight: "bold" }}>
+                    {Math.floor(sunHour)}:{String(Math.round((sunHour % 1) * 60)).padStart(2, "0")}
+                  </span>
+                </div>
               </div>
-            </label>
+            )}
           </div>
           {showControls && (
             <div className="dev-controls">
@@ -280,15 +299,15 @@ function App() {
               <Meter score={thermalScore} />
             </div>
             <div className="metric">
-              <span className="metric-label">Outdoor peak temperature</span>
+              <span className="metric-label">Outdoor temperature (now)</span>
               <span className="metric-value">
-                {climate.outdoorPeakC} <small>°C</small>
+                {currentOutdoorTemp.toFixed(1)} <small>°C</small>
               </span>
             </div>
             <div className="metric">
               <span className="metric-label">Indoor peak temperature</span>
               <span className="metric-value">
-                {current.indoorPeakC.toFixed(1)} <small>°C</small>
+                {adjustedCurrent.indoorPeakC.toFixed(1)} <small>°C</small>
               </span>
               <div className="bar">
                 <div className="bar-fill" style={{ width: `${Math.min(100, ((current.indoorPeakC - 28) / 20) * 100)}%` }} />
@@ -309,10 +328,10 @@ function App() {
             <div className="metric">
               <span className="metric-label">Indoor peak</span>
               <span className="metric-value">
-                {baseline.indoorPeakC.toFixed(1)} → {current.indoorPeakC.toFixed(1)} <small>°C</small>
+                {baseline.indoorPeakC.toFixed(1)} → {adjustedCurrent.indoorPeakC.toFixed(1)} <small>°C</small>
                 {applied.length > 0 && (
                   <span className="delta">
-                    ↓ {(baseline.indoorPeakC - current.indoorPeakC).toFixed(1)} °C
+                    ↓ {(baseline.indoorPeakC - adjustedCurrent.indoorPeakC).toFixed(1)} °C
                   </span>
                 )}
               </span>
