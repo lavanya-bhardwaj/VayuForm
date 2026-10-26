@@ -684,9 +684,9 @@ export default function BuildingScene({
           {showKhusChik && (
             <KhusChik
               {...khusChikProps}
-              position={[-2.42, 5.25, 4.19]}
-              width={3.0}
-              height={4.7}
+              position={[-4.5, 4.0, 0]}
+              width={1.5}
+              height={3.0}
               depth={0.12}
               selected={selectedKhusChikId === "khus-chik"}
               onSelect={() => setSelectedKhusChikId("khus-chik")}
