@@ -553,7 +553,16 @@ export default function BuildingScene({
   chhajaProps,
 }) {
   const [selectedJali, setSelectedJali] = useState(false);
-  const [selectedChhajja, setSelectedChhajja] = useState(false);
+  const [selectedChhajjaId, setSelectedChhajjaId] = useState(null);
+
+  const chhajaConfigs = useMemo(() => {
+    const wScale = getWindowWidthScale(building);
+    return [
+      { id: "chhajja-1", pos: [-2.42, 8.0, Z_FRONT], width: 1.17 * wScale },
+      { id: "chhajja-2", pos: [-0.37, 8.0, Z_FRONT], width: 1.0 * wScale },
+    ];
+  }, [building]);
+
   // Create gradient materials once
   const thermalMaterials = useMemo(() => {
     const wallMat = createThermalGradientMaterial({
@@ -599,8 +608,11 @@ export default function BuildingScene({
 
   return (
 <div style={{ width: "100%", height: "100%", background: "#d8e1e8", position: "relative" }}>
-      <Canvas shadows="percentage" 
-        onPointerMissed={() => setSelectedJali(false)}
+      <Canvas shadows="percentage"
+        onPointerMissed={() => {
+          setSelectedJali(false);
+          setSelectedChhajjaId(null);
+        }}
         dpr={[1, 2]}
         camera={{ position: [-10, 3.0, 28.5], fov: 30, near: 0.1, far: 1000 }}
         gl={{ antialias: true, toneMapping: THREE.NeutralToneMapping }}
@@ -649,24 +661,25 @@ export default function BuildingScene({
             />
           )}
 
-          {/* Second Passive-Cooling Retrofit Intervention: Deep Overhang Chhajja */}
-          {showChhajja && (
+          {/* Second Passive-Cooling Retrofit Intervention: Deep Overhang Chhajjas */}
+          {showChhajja && chhajaConfigs.map((config) => (
             <Chhajja
-            {...chhajaProps}
-            position={[-2.42, 6.5, 4.19]}
-            width={3.0}
-            depth={1.0}
-            thickness={0.25}
-            selected={selectedChhajja}
-            onSelect={() => setSelectedChhajja(true)}
+              key={config.id}
+              {...chhajaProps}
+              position={config.pos}
+              width={config.width}
+              depth={1.0}
+              thickness={0.25}
+              selected={selectedChhajjaId === config.id}
+              onSelect={() => setSelectedChhajjaId(config.id)}
             />
-          )}
+          ))}
 
           <OrbitControls
           target={[0.4, 4.9, 0]}
-          enablePan={!selectedJali && !selectedChhajja}
-          enableRotate={!selectedJali && !selectedChhajja}
-          enableZoom={!selectedJali && !selectedChhajja}
+          enablePan={!selectedJali && !selectedChhajjaId}
+          enableRotate={!selectedJali && !selectedChhajjaId}
+          enableZoom={!selectedJali && !selectedChhajjaId}
           minDistance={8}
           maxDistance={45}
           minPolarAngle={Math.PI / 5}
