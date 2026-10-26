@@ -14,6 +14,7 @@ import {
 import Jali from "./interventions/Jali";
 import Chhajja from "./interventions/Chhajja";
 import KhusChik from "./interventions/KhusChik";
+import GreenRoof from "./interventions/GreenRoof";
 
 /* ==========================================================================
    VAYUFORM – BASE BUILDING MODEL
@@ -561,10 +562,12 @@ export default function BuildingScene({
   showKhusChik = true,
   khusChikProps,
   hasCoolRoof = false,
+  showGreenRoof = true,
 }) {
   const [selectedJali, setSelectedJali] = useState(false);
   const [selectedChhajjaId, setSelectedChhajjaId] = useState(null);
   const [selectedKhusChikId, setSelectedKhusChikId] = useState(null);
+  const [selectedGreenRoofId, setSelectedGreenRoofId] = useState(null);
 
   const chhajaConfigs = useMemo(() => {
     const wScale = getWindowWidthScale(building);
@@ -573,6 +576,12 @@ export default function BuildingScene({
       { id: "chhajja-2", pos: [-0.37, 8.0, Z_FRONT], width: 1.0 * wScale },
     ];
   }, [building]);
+
+  const greenRoofConfigs = [
+    { id: "greenroof-1", pos: [-2.5, 9.0, 1.5] },
+    { id: "greenroof-2", pos: [1.0, 9.0, -1.0] },
+    { id: "greenroof-3", pos: [-0.5, 9.0, 2.0] },
+  ];
 
   // Create gradient materials once
   const thermalMaterials = useMemo(() => {
@@ -624,6 +633,7 @@ export default function BuildingScene({
           setSelectedJali(false);
           setSelectedChhajjaId(null);
           setSelectedKhusChikId(null);
+          setSelectedGreenRoofId(null);
         }}
         dpr={[1, 2]}
         camera={{ position: [-10, 3.0, 28.5], fov: 30, near: 0.1, far: 1000 }}
@@ -701,11 +711,22 @@ export default function BuildingScene({
             />
           )}
 
+          {/* Fourth Passive-Cooling Retrofit Intervention: Green Roof Plants */}
+          {showGreenRoof && greenRoofConfigs.map((config) => (
+            <GreenRoof
+              key={config.id}
+              position={config.pos}
+              size={0.8}
+              selected={selectedGreenRoofId === config.id}
+              onSelect={() => setSelectedGreenRoofId(config.id)}
+            />
+          ))}
+
           <OrbitControls
           target={[0.4, 4.9, 0]}
-          enablePan={!selectedJali && !selectedChhajjaId && !selectedKhusChikId}
-          enableRotate={!selectedJali && !selectedChhajjaId && !selectedKhusChikId}
-          enableZoom={!selectedJali && !selectedChhajjaId && !selectedKhusChikId}
+          enablePan={!selectedJali && !selectedChhajjaId && !selectedKhusChikId && !selectedGreenRoofId}
+          enableRotate={!selectedJali && !selectedChhajjaId && !selectedKhusChikId && !selectedGreenRoofId}
+          enableZoom={!selectedJali && !selectedChhajjaId && !selectedKhusChikId && !selectedGreenRoofId}
           minDistance={8}
           maxDistance={45}
           minPolarAngle={Math.PI / 5}
