@@ -126,8 +126,14 @@ export default function KhusChik({
       onPointerDown={handlePointerDown}
     >
       {/* BACKGROUND (drop shadow / gray backing) */}
-      <mesh position={[0, 0, -0.1]}>
-        <boxGeometry args={[width + 0.1, height + 0.1, 0.05]} />
+      <mesh position={wall === "left" || wall === "right" ? [0, 0, -0.1] : [0, 0, -0.1]}>
+        <boxGeometry
+          args={
+            wall === "left" || wall === "right"
+              ? [depth + 0.1, height + 0.1, 0.05]
+              : [width + 0.1, height + 0.1, 0.05]
+          }
+        />
         <meshStandardMaterial
           color="#505050"
           roughness={0.85}
@@ -135,7 +141,13 @@ export default function KhusChik({
       </mesh>
 
       {/* KHUS-CHIK GRASS SCREEN (flat woven panel) */}
-      <mesh geometry={new THREE.BoxGeometry(width, height, depth)}>
+      <mesh
+        geometry={
+          wall === "left" || wall === "right"
+            ? new THREE.BoxGeometry(depth, height, width)
+            : new THREE.BoxGeometry(width, height, depth)
+        }
+      >
         <meshStandardMaterial
           map={grassTexture}
           color="#D4B896"
@@ -146,7 +158,11 @@ export default function KhusChik({
       {/* TOP FRAME */}
       <mesh position={[0, height / 2 + 0.08, 0]}>
         <boxGeometry
-          args={[width + 0.25, 0.16, depth + 0.08]}
+          args={
+            wall === "left" || wall === "right"
+              ? [depth + 0.25, 0.16, width + 0.08]
+              : [width + 0.25, 0.16, depth + 0.08]
+          }
         />
         <meshStandardMaterial color="#8B6F47" />
       </mesh>
@@ -154,23 +170,47 @@ export default function KhusChik({
       {/* BOTTOM FRAME */}
       <mesh position={[0, -height / 2 - 0.08, 0]}>
         <boxGeometry
-          args={[width + 0.25, 0.16, depth + 0.08]}
+          args={
+            wall === "left" || wall === "right"
+              ? [depth + 0.25, 0.16, width + 0.08]
+              : [width + 0.25, 0.16, depth + 0.08]
+          }
         />
         <meshStandardMaterial color="#8B6F47" />
       </mesh>
 
-      {/* LEFT FRAME */}
-      <mesh position={[-width / 2 - 0.08, 0, 0]}>
+      {/* LEFT FRAME (or FRONT/BACK for side walls) */}
+      <mesh
+        position={
+          wall === "left" || wall === "right"
+            ? [-depth / 2 - 0.08, 0, 0]
+            : [-width / 2 - 0.08, 0, 0]
+        }
+      >
         <boxGeometry
-          args={[0.16, height, depth + 0.08]}
+          args={
+            wall === "left" || wall === "right"
+              ? [0.16, height, width + 0.08]
+              : [0.16, height, depth + 0.08]
+          }
         />
         <meshStandardMaterial color="#8B6F47" />
       </mesh>
 
-      {/* RIGHT FRAME */}
-      <mesh position={[width / 2 + 0.08, 0, 0]}>
+      {/* RIGHT FRAME (or BACK/FRONT for side walls) */}
+      <mesh
+        position={
+          wall === "left" || wall === "right"
+            ? [depth / 2 + 0.08, 0, 0]
+            : [width / 2 + 0.08, 0, 0]
+        }
+      >
         <boxGeometry
-          args={[0.16, height, depth + 0.08]}
+          args={
+            wall === "left" || wall === "right"
+              ? [0.16, height, width + 0.08]
+              : [0.16, height, depth + 0.08]
+          }
         />
         <meshStandardMaterial color="#8B6F47" />
       </mesh>
@@ -179,11 +219,11 @@ export default function KhusChik({
       {selected && (
         <mesh>
           <boxGeometry
-            args={[
-              width + 0.35,
-              height + 0.35,
-              depth + 0.35,
-            ]}
+            args={
+              wall === "left" || wall === "right"
+                ? [depth + 0.35, height + 0.35, width + 0.35]
+                : [width + 0.35, height + 0.35, depth + 0.35]
+            }
           />
 
           <meshBasicMaterial
