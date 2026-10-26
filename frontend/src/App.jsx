@@ -269,44 +269,60 @@ function App() {
           )}
 
           {showSunSlider && (
-            <div
-              style={{
-                position: "fixed",
-                bottom: "100px",
-                right: "20px",
-                background: "var(--card)",
-                border: "1px solid var(--border)",
-                borderRadius: "12px",
-                padding: "16px",
-                minWidth: "300px",
-                boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
-                zIndex: 1000,
-              }}
-            >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
-                <span style={{ fontSize: "13px", fontWeight: "500", color: "#2b2623" }}>Time of Day</span>
-                <button
-                  onClick={() => setShowSunSlider(false)}
-                  style={{ border: "none", background: "transparent", cursor: "pointer", fontSize: "18px" }}
-                >
-                  ✕
-                </button>
+            <>
+              {/* Click outside to close */}
+              <div
+                onClick={() => setShowSunSlider(false)}
+                style={{
+                  position: "fixed",
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  zIndex: 999,
+                }}
+              />
+              {/* Popup */}
+              <div
+                onClick={(e) => e.stopPropagation()}
+                style={{
+                  position: "fixed",
+                  bottom: "100px",
+                  right: "20px",
+                  background: "var(--card)",
+                  border: "1px solid var(--border)",
+                  borderRadius: "12px",
+                  padding: "16px",
+                  minWidth: "300px",
+                  boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+                  zIndex: 1000,
+                }}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+                  <span style={{ fontSize: "13px", fontWeight: "500", color: "#2b2623" }}>Time of Day</span>
+                  <button
+                    onClick={() => setShowSunSlider(false)}
+                    style={{ border: "none", background: "transparent", cursor: "pointer", fontSize: "18px" }}
+                  >
+                    ✕
+                  </button>
+                </div>
+                <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+                  <input
+                    type="range"
+                    min={sunrise.toFixed(2)}
+                    max={sunset.toFixed(2)}
+                    step="0.25"
+                    value={sunHour}
+                    onChange={(e) => setSunHour(Number(e.target.value))}
+                    style={{ flex: 1 }}
+                  />
+                  <span style={{ minWidth: "60px", fontSize: "0.9em", fontWeight: "bold", color: "#2b2623" }}>
+                    {Math.floor(sunHour)}:{String(Math.round((sunHour % 1) * 60)).padStart(2, "0")}
+                  </span>
+                </div>
               </div>
-              <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
-                <input
-                  type="range"
-                  min={sunrise.toFixed(2)}
-                  max={sunset.toFixed(2)}
-                  step="0.25"
-                  value={sunHour}
-                  onChange={(e) => setSunHour(Number(e.target.value))}
-                  style={{ flex: 1 }}
-                />
-                <span style={{ minWidth: "60px", fontSize: "0.9em", fontWeight: "bold", color: "#2b2623" }}>
-                  {Math.floor(sunHour)}:{String(Math.round((sunHour % 1) * 60)).padStart(2, "0")}
-                </span>
-              </div>
-            </div>
+            </>
           )}
           {showControls && (
             <div className="dev-controls">
