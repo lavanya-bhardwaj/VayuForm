@@ -87,10 +87,10 @@
       "applicableTo": ["retrofit", "new"],
       "description": "Wet khus grass screen over openings. Evaporation cools the incoming air.",
       "heritage": "Khus tattis used in North Indian homes before air conditioning",
-      "effect": { "glazingShadingMult": 0.6 },
+      "effect": { "glazingShadingMult": 0.8, "evapCoolingK": 1.0 },
       "unitCostInr": 400,
       "costBasis": "glazing_m2",
-      "source": "Screen shading with evaporative cooling; needs regular watering"
+      "source": "Shading of about 20% plus evaporative cooling worth about 1 K in dry air. The evaporative part scales with dryness (see heatModel.js). Needs regular watering. Assumed, not measured."
     },
     {
       "id": "clerestory-vent",

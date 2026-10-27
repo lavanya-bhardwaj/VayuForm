@@ -40,9 +40,11 @@
     }
   },
   "energy": {
-    "_note": "Assumed unconditioned baseline cooling demand, scaled by the change in heat gain. Assumption, not measured data. Tariff and grid carbon are Delhi-based and apply to every city for now.",
-    "baselineCoolingKwhPerM2Yr": 45,
+    "_note": "Baseline cooling demand is the reference demand for Delhi, scaled by each city's cooling degree-hours (May–June, above the comfort temperature). Reference demand is an assumption, not measured data. Tariff and grid carbon are Delhi-based and apply to every city for now.",
+    "referenceCoolingKwhPerM2Yr": 45,
     "tariffInrPerKwh": 7.5,
-    "gridCo2KgPerKwh": 0.71
+    "gridCo2KgPerKwh": 0.71,
+    "baselineCoolingKwhPerM2Yr": 45,
+    "coolingDegreeHours": 7447
   }
 }

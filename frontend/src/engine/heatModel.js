@@ -22,6 +22,7 @@ export function mergeEffects(ids) {
     glazingShadingMult: 1,
     wallExposureMult: 1,
     achAdd: 0,
+    evapCoolingK: 0,
   };
 
   for (const id of ids) {
@@ -35,6 +36,7 @@ export function mergeEffects(ids) {
     if (e.glazingShadingMult !== undefined) base.glazingShadingMult *= e.glazingShadingMult;
     if (e.wallExposureMult !== undefined) base.wallExposureMult *= e.wallExposureMult;
     if (e.achAdd !== undefined) base.achAdd += e.achAdd;
+    if (e.evapCoolingK !== undefined) base.evapCoolingK += e.evapCoolingK;
   }
   return base;
 }
@@ -94,20 +96,27 @@ export function analyse(building, ids = []) {
   const roofTSol = tOut + (fx.roofAlpha * sun.roof) / ho;
   const roofGainW = fx.roofU * geo.roofM2 * (roofTSol - tIn);
 
-  const totalGainW = wallGainW + glazingGainW + roofGainW;
+  // Lumped heat removal, used for the indoor peak and for the evaporative term below.
+  const achTotal = climate.calibration.baseAchPerHour + fx.achAdd;
+  const ventCoeff = (climate.airDensityTimesSpecificHeat * achTotal * climate.storeyHeightM) / 3600;
+  const heatRemovalWm2K = climate.calibration.lumpedHeatLossWm2K + ventCoeff;
+
+  // Evaporative cooling from wet screens. Worth evapCoolingK in dry air and less as the air gets humid.
+  // Counted as the gain it removes, so savings and the indoor peak stay consistent.
+  const dryness = Math.min(1, Math.max(0, (100 - climate.relHumidityAfternoonPct) / 70));
+  const evapGainW = fx.evapCoolingK * dryness * heatRemovalWm2K * geo.floorAreaM2;
+
+  const totalGainW = wallGainW + glazingGainW + roofGainW - evapGainW;
   const envelopeM2 =
     geo.wallM2 * fx.wallExposureMult + geo.glazingM2 + geo.roofM2;
   const gainPerFloorM2 = geo.floorAreaM2 > 0 ? totalGainW / geo.floorAreaM2 : 0;
 
   // Lumped estimate of indoor peak: gain divided by the effective heat-removal coefficient.
-  const achTotal = climate.calibration.baseAchPerHour + fx.achAdd;
-  const ventCoeff = (climate.airDensityTimesSpecificHeat * achTotal * climate.storeyHeightM) / 3600;
-  const heatRemovalWm2K = climate.calibration.lumpedHeatLossWm2K + ventCoeff;
   const indoorPeakC = tIn + gainPerFloorM2 / heatRemovalWm2K;
 
   return {
     totalGainW,
-    gainBreakdownW: { walls: wallGainW, glazing: glazingGainW, roof: roofGainW },
+    gainBreakdownW: { walls: wallGainW, glazing: glazingGainW, roof: roofGainW, evaporative: -evapGainW },
     gainPerFloorM2,
     envelopeGainWm2: envelopeM2 > 0 ? totalGainW / envelopeM2 : 0,
     indoorPeakC,
