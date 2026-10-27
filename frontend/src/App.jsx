@@ -1,6 +1,7 @@
 import { useMemo, useState, useEffect } from "react";
 import BuildingScene from "./components/3d/BuildingScene";
 import ThermalSlider from "./components/ui/ThermalSlider";
+import AanganInterior from "./components/3d/AanganInterior";
 import { DEFAULT_BUILDING, analyse, annualImpact, buildGeometry, interventionCostInr } from "./engine/heatModel";
 import { interventionsFor } from "./engine/interventions";
 import { optimise, totalCostInr } from "./engine/optimizer";
@@ -12,6 +13,11 @@ import { validateEconomics } from "./engine/validation_economics";
 import { getSunTimes, getOutdoorTemperature } from "./utils/sunPosition";
 import climate from "./data/climate/delhi.json";
 import "./App.css";
+
+const VIEW_MODES = [
+  { id: "exterior", label: "3D Exterior" },
+  { id: "courtyard", label: "Courtyard" },
+];
 
 const SCENARIOS = [
   { id: "retrofit", label: "Retrofit existing building" },
@@ -40,6 +46,7 @@ function App() {
   const [tintOpacity, setTintOpacity] = useState(0.58);
   const [showControls, setShowControls] = useState(false);
   const [recommendation, setRecommendation] = useState(null);
+  const [viewMode, setViewMode] = useState("exterior");
 
   // Sun position: hour of day (0-24)
   const { sunrise, sunset } = getSunTimes();
@@ -238,7 +245,26 @@ function App() {
         {/* CENTRE: viewport */}
         <main className="vayu-center">
           <div className="vayu-viewport">
-            <BuildingScene
+            <div className="view-switch">
+              {VIEW_MODES.map((m) => (
+                <button key={m.id} className={viewMode === m.id ? "on" : ""} onClick={() => setViewMode(m.id)}>
+                  {m.label}
+                </button>
+              ))}
+            </div>
+            {viewMode !== "exterior" && (
+              <AanganInterior
+                building={building}
+                hasAangan={applied.includes("aangan")}
+                showJali={applied.includes("jali")}
+                showKhusChik={applied.includes("khus-chik")}
+                hasGreenRoof={applied.includes("green-roof")}
+                thermalScore={thermalScore}
+                tintOpacity={tintOpacity}
+                sunHour={sunHour}
+              />
+            )}
+            {viewMode === "exterior" && <BuildingScene
               building={building}
               thermalScore={thermalScore}
               tintOpacity={tintOpacity}
@@ -248,7 +274,7 @@ function App() {
               hasCoolRoof={applied.includes("lime-cool-roof")}
               showGreenRoof={applied.includes("green-roof")}
               sunHour={sunHour}
-            />
+            />}
           </div>
 
           {/* Time slider - compact sun icon */}

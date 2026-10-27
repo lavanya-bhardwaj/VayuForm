@@ -8,10 +8,13 @@
       "heritage": "Mughal architecture, Hawa Mahal, Jaipur",
       "description": "Decorative lattice screen mounted on south/west/east facades to block direct solar radiation while allowing ventilation.",
       "applicableTo": ["retrofit", "new"],
+      "unitCostInr": 1990,
+      "costBasis": "wall_m2",
       "cost": {
-        "perUnit": 1200,
+        "perUnit": 1990,
         "unit": "m²",
-        "source": "CPWD DSR Delhi 2024 (terracotta jali work)"
+        "range": "₹120–₹250 per sq. ft. (₹1290–₹2690/m²)",
+        "source": "Delhi-NCR market pricing 2024-2025 (terracotta/wooden jali work with installation)"
       },
       "effect": {
         "SHGC_reduction": 0.45,
@@ -30,10 +33,12 @@
       "heritage": "Haveli and Jaipur City architecture, Hindu temples",
       "description": "600–1200 mm horizontal overhang above windows and south/west walls to block high-angle summer sun while allowing winter sun.",
       "applicableTo": ["retrofit", "new"],
+      "unitCostInr": 1200,
+      "costBasis": "wall_m2",
       "cost": {
-        "perUnit": 450,
+        "perUnit": 1200,
         "unit": "m_linear",
-        "source": "CPWD DSR Delhi 2024 (RCC overhang, 200mm thickness)"
+        "source": "Delhi-NCR market pricing 2024-2025 (RCC overhang, 200mm thickness, labour + material)"
       },
       "effect": {
         "shadingFactor_summer": 0.35,
@@ -53,6 +58,8 @@
       "heritage": "Traditional haveli courtyards, Rajasthan, Gujarat, North India",
       "description": "Central open courtyard (4×4 m to 6×6 m typical) with high walls (~8–10 m) that creates thermal mass, stack effect ventilation, and evaporative cooling.",
       "applicableTo": ["new", "retrofit_as_lightwell"],
+      "unitCostInr": 2500,
+      "costBasis": "courtyard_m2",
       "cost": {
         "perUnit": 2500,
         "unit": "m²",
@@ -78,10 +85,13 @@
       "heritage": "Traditional lime plaster, centuries-old practice across India",
       "description": "High-albedo white lime or acrylic coating on roof to reflect solar radiation and reduce roof surface temperature.",
       "applicableTo": ["retrofit", "new"],
+      "unitCostInr": 430,
+      "costBasis": "roof_m2",
       "cost": {
-        "perUnit": 50,
+        "perUnit": 430,
         "unit": "m²",
-        "source": "CPWD DSR Delhi 2024 (lime or cool-paint application + priming)"
+        "range": "₹20–₹60 per sq. ft. (₹215–₹645/m²)",
+        "source": "Delhi-NCR market pricing 2024-2025"
       },
       "effect": {
         "albedo_old_to_new": [0.25, 0.75],
@@ -95,6 +105,32 @@
       ]
     },
     {
+      "id": "reflective_roof_tiles",
+      "name": "Reflective Roof Tiles",
+      "hindiName": "परावर्तक छत की टाइलें",
+      "category": "surface_albedo",
+      "heritage": "Modern cool roofing technology for hot climates",
+      "description": "High-albedo reflective tiles installed on roof surface to reflect solar radiation and reduce indoor temperatures.",
+      "applicableTo": ["retrofit", "new"],
+      "unitCostInr": 1130,
+      "costBasis": "roof_m2",
+      "cost": {
+        "perUnit": 1130,
+        "unit": "m²",
+        "range": "₹60–₹150 per sq. ft. (₹645–₹1615/m²)",
+        "source": "Delhi-NCR market pricing 2024-2025"
+      },
+      "effect": {
+        "albedo_improvement": 0.65,
+        "roof_solar_reduction": 0.70,
+        "notes": "Reflects 65–75% of incident solar radiation; reduces roof surface temp by ~25–30°C vs. dark tiles"
+      },
+      "citations": [
+        "ECO-Niwas Samhita 2018: Cool roof specs for India (albedo ≥0.65)",
+        "Akbari et al. (2009): Cool roofs and their impact on energy consumption"
+      ]
+    },
+    {
       "id": "green_roof",
       "name": "Green Roof (Planted Terrace)",
       "hindiName": "हरी छत",
@@ -102,10 +138,13 @@
       "heritage": "Terraced gardens, Mughal gardens (Bagh design), modern sustainability",
       "description": "Shallow-depth planted roof (100–150 mm growing medium) with drought-resistant plants, providing evaporative cooling, insulation, and thermal mass.",
       "applicableTo": ["new", "retrofit_load_permitting"],
+      "unitCostInr": 2690,
+      "costBasis": "roof_m2",
       "cost": {
-        "perUnit": 1800,
+        "perUnit": 2690,
         "unit": "m²",
-        "source": "CPWD DSR Delhi 2024 (green roof assembly: substrate, plants, drainage, waterproofing)"
+        "range": "₹150–₹350 per sq. ft. (₹1615–₹3765/m²)",
+        "source": "Delhi-NCR market pricing 2024-2025 (includes substrate, plants, drainage, waterproofing, labour)"
       },
       "effect": {
         "U_value_old_to_new": [2.0, 0.4],
@@ -127,6 +166,8 @@
       "heritage": "Laurie Baker's modern vernacular innovation (1960s–80s), inspired by traditional Keralan construction",
       "description": "Masonry cavity wall (brick laid in rotated pattern) that creates continuous air voids within the wall body for insulation without added material.",
       "applicableTo": ["new"],
+      "unitCostInr": 520,
+      "costBasis": "wall_m2",
       "cost": {
         "perUnit": 520,
         "unit": "m²",
@@ -150,10 +191,13 @@
       "heritage": "Mughal tile work, temple ornamentation, handmade pottery traditions",
       "description": "Exterior terracotta or clay tile screen (50 mm air gap) on south/west walls provides shading, thermal mass, and evaporative cooling in monsoon.",
       "applicableTo": ["retrofit", "new"],
+      "unitCostInr": 1990,
+      "costBasis": "wall_m2",
       "cost": {
-        "perUnit": 800,
+        "perUnit": 1990,
         "unit": "m²",
-        "source": "CPWD DSR Delhi 2024 (handmade terracotta tiles + framework + air gap installation)"
+        "range": "₹120–₹250 per sq. ft. (₹1290–₹2690/m²)",
+        "source": "Delhi-NCR market pricing 2024-2025 (handmade terracotta tiles + framework + air gap installation)"
       },
       "effect": {
         "SHGC_reduction": 0.40,
@@ -173,6 +217,8 @@
       "heritage": "Ancient cooling technique, used across hot-dry India (Rajasthan, Gujarat)",
       "description": "Vertical screen of dried grass (khus/vetiver root) hung on windows or facades. Water drips from top; evaporation cools incoming air, especially effective in dry season.",
       "applicableTo": ["retrofit", "new"],
+      "unitCostInr": 80,
+      "costBasis": "wall_m2",
       "cost": {
         "perUnit": 80,
         "unit": "m²",
@@ -197,10 +243,13 @@
       "heritage": "Rajasthani haveli jharokhas, Hawa Mahal Jaipur, royal residences",
       "description": "Projecting window/balcony with latticed openings that allows cross-ventilation, reduces glare, and provides shading while controlling direct sunlight.",
       "applicableTo": ["retrofit", "new"],
+      "unitCostInr": 5000,
+      "costBasis": "floor",
       "cost": {
-        "perUnit": 3500,
+        "perUnit": 5000,
         "unit": "unit",
-        "source": "CPWD DSR Delhi 2024 (wooden jharokha fabrication, installation per unit ~1.2m × 1.2m)"
+        "range": "Approximated per market rates (₹120–₹250/sq ft for facade area)",
+        "source": "Delhi-NCR market pricing 2024-2025 (wooden jharokha fabrication, installation per unit ~1.2m × 1.2m)"
       },
       "effect": {
         "ventilation_ACH_improvement": 0.5,
@@ -220,10 +269,13 @@
       "heritage": "Badgirs of Iran/Afghanistan, modified for Indian courtyard architecture",
       "description": "High ventilator or small tower above roof that creates stack-effect ventilation (hot air rises and exits), drawing cool air up through the building.",
       "applicableTo": ["new"],
+      "unitCostInr": 4000,
+      "costBasis": "floor",
       "cost": {
-        "perUnit": 2200,
+        "perUnit": 4000,
         "unit": "unit",
-        "source": "CPWD DSR Delhi 2024 (RCC/brick ventilator construction, typical height 1.5–2m above roof)"
+        "labour": "₹200–₹400 per fan/ventilator",
+        "source": "Delhi-NCR market pricing 2024-2025 (RCC/brick ventilator construction, typical height 1.5–2m above roof)"
       },
       "effect": {
         "ACH_increase": 3,
