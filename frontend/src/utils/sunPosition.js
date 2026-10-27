@@ -1,17 +1,16 @@
 import * as SunCalc from "suncalc";
 
-// Delhi coordinates
-const DELHI_LAT = 28.7041;
-const DELHI_LNG = 77.1025;
+// Default location for sun calculations: New Delhi. Pass a site ({ lat, lon }) to use another city.
+const DEFAULT_AT = { lat: 28.6139, lon: 77.209 };
 
 // Use May 15 as reference (peak summer day)
 const REFERENCE_DATE = new Date(2026, 4, 15);
 
-export function getSunPosition(hourOfDay) {
+export function getSunPosition(hourOfDay, at = DEFAULT_AT) {
   const date = new Date(REFERENCE_DATE);
   date.setHours(Math.floor(hourOfDay), (hourOfDay % 1) * 60, 0, 0);
 
-  const sunPos = SunCalc.getPosition(date, DELHI_LAT, DELHI_LNG);
+  const sunPos = SunCalc.getPosition(date, at.lat, at.lon);
 
   // azimuth: 0 = N, π/2 = E, π = S, 3π/2 = W
   // altitude: 0 = horizon, π/2 = zenith
@@ -36,22 +35,22 @@ export function getSunPosition(hourOfDay) {
   return { x, y, z, altitude, azimuth };
 }
 
-export function getSunTimes(date = REFERENCE_DATE) {
-  const times = SunCalc.getTimes(date, DELHI_LAT, DELHI_LNG);
+export function getSunTimes(date = REFERENCE_DATE, at = DEFAULT_AT) {
+  const times = SunCalc.getTimes(date, at.lat, at.lon);
   return {
     sunrise: times.sunrise.getHours() + times.sunrise.getMinutes() / 60,
     sunset: times.sunset.getHours() + times.sunset.getMinutes() / 60,
   };
 }
 
-export function generateSunPath(numPoints = 40) {
-  const { sunrise, sunset } = getSunTimes();
+export function generateSunPath(numPoints = 40, at = DEFAULT_AT) {
+  const { sunrise, sunset } = getSunTimes(REFERENCE_DATE, at);
   const points = [];
 
   for (let i = 0; i <= numPoints; i++) {
     const t = i / numPoints;
     const hour = sunrise + t * (sunset - sunrise);
-    const pos = getSunPosition(hour);
+    const pos = getSunPosition(hour, at);
     if (pos) {
       points.push([pos.x, pos.y, pos.z]);
     }
@@ -60,13 +59,14 @@ export function generateSunPath(numPoints = 40) {
   return points;
 }
 
-export function getOutdoorTemperature(hourOfDay, peakTemp = 44) {
-  const { sunrise, sunset } = getSunTimes();
-
-  // Temperature follows a sine curve from sunrise to sunset
-  // Peak around 2-3 PM (14-15 hours)
-  const peakHour = 14.5;
-  const minTemp = 32; // minimum at sunrise/sunset
+/**
+ * Outdoor air temperature at a given hour, for the sun slider.
+ * It follows a sine curve from the city's night low at sunrise and sunset up to its design peak.
+ */
+export function getOutdoorTemperature(hourOfDay, climate, at = DEFAULT_AT) {
+  const { sunrise, sunset } = getSunTimes(REFERENCE_DATE, at);
+  const peakTemp = climate.outdoorPeakC;
+  const minTemp = climate.outdoorNightLowC;
 
   if (hourOfDay < sunrise || hourOfDay > sunset) {
     return minTemp;
@@ -75,7 +75,6 @@ export function getOutdoorTemperature(hourOfDay, peakTemp = 44) {
   // Normalized position in day (0 to 1)
   const dayLength = sunset - sunrise;
   const positionInDay = (hourOfDay - sunrise) / dayLength;
-  const peakPosition = (peakHour - sunrise) / dayLength;
 
   // Sine curve: min at edges, max at peak
   const tempFraction = Math.sin(positionInDay * Math.PI);

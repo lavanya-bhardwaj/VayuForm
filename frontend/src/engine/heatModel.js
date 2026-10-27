@@ -1,4 +1,4 @@
-import climate from "../data/climate/delhi.json";
+import { climateFor } from "./climate";
 import materials from "../data/materials.json";
 import { INTERVENTIONS } from "./interventions";
 
@@ -41,6 +41,7 @@ export function mergeEffects(ids) {
 
 /** Builds the geometry: facade areas, glazing, roof and the courtyard if it is used. */
 export function buildGeometry(building, ids) {
+  const climate = climateFor(building.site);
   const hasCourtyard = ids.includes("aangan");
   const courtyardM2 = hasCourtyard ? building.footprintM2 * COURTYARD_SHARE : 0;
   const roofM2 = building.footprintM2 - courtyardM2;
@@ -73,6 +74,7 @@ export function buildGeometry(building, ids) {
 export function analyse(building, ids = []) {
   const fx = mergeEffects(ids);
   const geo = buildGeometry(building, ids);
+  const climate = climateFor(building.site);
   const tOut = climate.outdoorPeakC;
   const tIn = climate.indoorComfortC;
   const ho = climate.surfaceHeatTransferCoeffWm2K;
@@ -110,13 +112,13 @@ export function analyse(building, ids = []) {
     envelopeGainWm2: envelopeM2 > 0 ? totalGainW / envelopeM2 : 0,
     indoorPeakC,
     achTotal,
-    thermalScore: thermalScoreFromGain(gainPerFloorM2),
+    thermalScore: thermalScoreFromGain(gainPerFloorM2, climate),
     geometry: geo,
   };
 }
 
 /** Maps gain per m² of floor onto the 0-100 scale that drives the thermal tint. */
-export function thermalScoreFromGain(gainPerFloorM2) {
+export function thermalScoreFromGain(gainPerFloorM2, climate) {
   const { minGainWm2Floor, maxGainWm2Floor } = climate.calibration.scoreRange;
   const t = (gainPerFloorM2 - minGainWm2Floor) / (maxGainWm2Floor - minGainWm2Floor);
   return Math.round(Math.max(0, Math.min(1, t)) * 100);
@@ -138,7 +140,7 @@ export function interventionCostInr(item, building, geo) {
 /** Yearly energy, money and carbon, scaled from an assumed baseline cooling demand. */
 export function annualImpact(building, ids, baseline) {
   const current = analyse(building, ids);
-  const { baselineCoolingKwhPerM2Yr, tariffInrPerKwh, gridCo2KgPerKwh } = climate.energy;
+  const { baselineCoolingKwhPerM2Yr, tariffInrPerKwh, gridCo2KgPerKwh } = climateFor(building.site).energy;
   const baseKwh = baselineCoolingKwhPerM2Yr * baseline.geometry.floorAreaM2;
   const ratio = baseline.gainPerFloorM2 > 0 ? current.gainPerFloorM2 / baseline.gainPerFloorM2 : 1;
   const kwh = baseKwh * ratio;

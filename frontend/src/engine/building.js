@@ -2,6 +2,7 @@
  * The building definition shared by the engine, the optimiser, the App and the 3D scenes.
  * Anything that changes the building should pass through sanitiseBuilding, so values stay in range.
  */
+import { DEFAULT_SITE, SITE_IDS } from "./climate";
 
 export const SCENARIO_OPTIONS = ["retrofit", "new"];
 
@@ -14,6 +15,7 @@ export const BUILDING_LIMITS = {
 };
 
 export const DEFAULT_BUILDING = {
+  site: DEFAULT_SITE,
   scenario: "retrofit",
   floors: 2,
   footprintM2: 100,
@@ -32,6 +34,7 @@ const clamp = (value, { min, max = Infinity }) => Math.min(max, Math.max(min, va
 export function sanitiseBuilding(input = {}) {
   const b = { ...DEFAULT_BUILDING, ...input };
   return {
+    site: SITE_IDS.includes(b.site) ? b.site : DEFAULT_BUILDING.site,
     scenario: SCENARIO_OPTIONS.includes(b.scenario) ? b.scenario : DEFAULT_BUILDING.scenario,
     floors: clamp(Math.round(finite(b.floors, DEFAULT_BUILDING.floors)), BUILDING_LIMITS.floors),
     footprintM2: clamp(finite(b.footprintM2, DEFAULT_BUILDING.footprintM2), BUILDING_LIMITS.footprintM2),

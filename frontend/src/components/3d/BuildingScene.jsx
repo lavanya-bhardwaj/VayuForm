@@ -3,6 +3,7 @@ import * as THREE from "three";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
 import { getSunPosition, generateSunPath } from "../../utils/sunPosition";
+import { climateFor } from "../../engine/climate";
 import {
   BASE_BUILDING_PALETTE,
   createThermalGradientMaterial,
@@ -555,8 +556,8 @@ function SunPath({ sunHour }) {
   );
 }
 
-function SunLight({ sunHour }) {
-  const sunPos = getSunPosition(sunHour);
+function SunLight({ sunHour, site }) {
+  const sunPos = getSunPosition(sunHour, site);
 
   return (
     <>
@@ -711,7 +712,7 @@ export default function BuildingScene({
           <ambientLight intensity={0.25} />
 
           {/* Dynamic sun lighting based on time of day */}
-          <SunLight sunHour={sunHour} />
+          <SunLight sunHour={sunHour} site={climateFor(building.site).site} />
 
           <Ground palette={palette} />
           <Landscape />

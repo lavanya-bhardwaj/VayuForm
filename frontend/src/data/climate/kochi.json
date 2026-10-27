@@ -1,0 +1,48 @@
+{
+  "_note": "Constants shared by every city. Edit this file, then run scripts/fetch-climate.mjs to regenerate the city files. Surface solar values for the vertical facades are still placeholders. Replace them with values processed from each city's EPW file when available.",
+  "location": "Kochi, Kerala",
+  "site": {
+    "id": "kochi",
+    "name": "Kochi",
+    "region": "Kerala",
+    "lat": 9.9312,
+    "lon": 76.2673
+  },
+  "source": {
+    "provider": "Open-Meteo Historical Weather API",
+    "url": "https://archive-api.open-meteo.com/v1/archive",
+    "period": "2015-05-01 to 2024-06-30, May and June only",
+    "years": 10,
+    "method": "Medians across years of annual peaks, as described in scripts/fetch-climate.mjs.",
+    "fetchedOn": "2026-10-27"
+  },
+  "outdoorPeakC": 31.4,
+  "outdoorNightLowC": 25.2,
+  "relHumidityAfternoonPct": 82,
+  "indoorComfortC": 28,
+  "solarPeakWm2": {
+    "N": 150,
+    "E": 550,
+    "S": 350,
+    "W": 650,
+    "roof": 916
+  },
+  "surfaceHeatTransferCoeffWm2K": 17,
+  "airDensityTimesSpecificHeat": 1206,
+  "storeyHeightM": 3.2,
+  "calibration": {
+    "_note": "Lumped-capacitance term that stands in for thermal mass and conduction to the indoor air. Tuned so an unshaded 2-storey brick house peaks near 39 °C indoors. Replace with a proper dynamic simulation later.",
+    "lumpedHeatLossWm2K": 25,
+    "baseAchPerHour": 1,
+    "scoreRange": {
+      "minGainWm2Floor": 50,
+      "maxGainWm2Floor": 300
+    }
+  },
+  "energy": {
+    "_note": "Assumed unconditioned baseline cooling demand, scaled by the change in heat gain. Assumption, not measured data. Tariff and grid carbon are Delhi-based and apply to every city for now.",
+    "baselineCoolingKwhPerM2Yr": 45,
+    "tariffInrPerKwh": 7.5,
+    "gridCo2KgPerKwh": 0.71
+  }
+}

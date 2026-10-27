@@ -13,7 +13,7 @@ import { validateSolar } from "./engine/validation_solar";
 import { validateInterventions } from "./engine/validation_interventions";
 import { validateEconomics } from "./engine/validation_economics";
 import { getSunTimes, getOutdoorTemperature } from "./utils/sunPosition";
-import climate from "./data/climate/delhi.json";
+import { CLIMATES, SITE_IDS, climateFor } from "./engine/climate";
 import "./App.css";
 
 const API_URL = "http://localhost:3001";
@@ -45,6 +45,8 @@ function Meter({ score }) {
 
 function App() {
   const [building, setBuilding] = useState(DEFAULT_BUILDING);
+  // Climate for the building's city. Everything location-dependent reads from this.
+  const climate = climateFor(building.site);
   // The selected interventions live on the building, so they travel with it.
   const active = building.interventions;
   const setActive = (ids) => setBuilding((b) => sanitiseBuilding({ ...b, interventions: ids }));
@@ -56,9 +58,12 @@ function App() {
   const [explaining, setExplaining] = useState(false);
   const [viewMode, setViewMode] = useState("exterior");
   const [compare, setCompare] = useState("after");
+  const [brief, setBrief] = useState("");
+  const [briefing, setBriefing] = useState(false);
+  const [briefResult, setBriefResult] = useState(null);
 
   // Sun position: hour of day (0-24)
-  const { sunrise, sunset } = getSunTimes();
+  const { sunrise, sunset } = getSunTimes(undefined, climate.site);
   const [sunHour, setSunHour] = useState((sunrise + sunset) / 2); // midday
   const [showSunSlider, setShowSunSlider] = useState(false);
 
@@ -83,7 +88,7 @@ function App() {
   const thermalScore = overrideScore ?? current.thermalScore;
 
   // Calculate time-dependent outdoor temperature
-  const currentOutdoorTemp = getOutdoorTemperature(sunHour);
+  const currentOutdoorTemp = getOutdoorTemperature(sunHour, climate, climate.site);
   const adjustedCurrent = useMemo(() => {
     const adjusted = { ...current };
     // Scale indoor peak based on outdoor temperature change
@@ -129,6 +134,13 @@ function App() {
           paybackYears: Math.round(best.paybackYears * 10) / 10,
           indoorPeakC: Math.round(best.indoorPeakC * 10) / 10,
           baselinePeakC: Math.round(baseline.indoorPeakC * 10) / 10,
+          climate: {
+            location: climate.location,
+            outdoorPeakC: climate.outdoorPeakC,
+            outdoorNightLowC: climate.outdoorNightLowC,
+            relHumidityAfternoonPct: climate.relHumidityAfternoonPct,
+            roofSolarWm2: climate.solarPeakWm2.roof,
+          },
         }),
       });
       if (!r.ok) throw new Error(`status ${r.status}`);
@@ -140,6 +152,35 @@ function App() {
       });
     } finally {
       setExplaining(false);
+    }
+  };
+
+  // Reads the brief, fills the form, then runs the recommendation and applies the best set.
+  const planFromBrief = async () => {
+    if (!brief.trim()) return;
+    setBriefing(true);
+    setBriefResult(null);
+    try {
+      const r = await fetch(`${API_URL}/api/brief`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ brief }),
+      });
+      if (!r.ok) throw new Error(`status ${r.status}`);
+      const data = await r.json();
+      const found = Object.keys(data.fields).length > 0;
+      if (found) {
+        updateBuilding(data.fields);
+        const result = optimise(sanitiseBuilding({ ...building, ...data.fields }));
+        setRecommendation(result);
+        setExplanation(null);
+        if (result.best) setActive(result.best.ids);
+      }
+      setBriefResult({ assumptions: data.assumptions, source: data.source, found });
+    } catch {
+      setBriefResult({ assumptions: ["Could not reach the brief service. Check that the backend is running on port 3001."], source: "error", found: false });
+    } finally {
+      setBriefing(false);
     }
   };
 
@@ -292,10 +333,49 @@ const exportReport = () => {
           <button className="btn solid" onClick={exportReport}>
   ⤓ Export Report
 </button>
-          <div className="location-chip">📍 Delhi, India</div>
+          <div className="location-chip">📍 {climate.location}</div>
           <div className="avatar">◯</div>
         </div>
       </header>
+
+      {/* ---------- BRIEF BAR: describe the building in plain words ---------- */}
+      <section className="vayu-brief">
+        <form
+          className="brief-form"
+          onSubmit={(e) => {
+            e.preventDefault();
+            planFromBrief();
+          }}
+        >
+          <label className="brief-label" htmlFor="brief-input">Describe the building</label>
+          <input
+            id="brief-input"
+            className="brief-input"
+            type="text"
+            maxLength={1000}
+            placeholder="e.g. Two-storey house in Jaipur, 120 sq m, budget 3 lakh, retrofit the existing home"
+            value={brief}
+            onChange={(e) => setBrief(e.target.value)}
+          />
+          <button className="btn brief-btn" type="submit" disabled={briefing || !brief.trim()}>
+            {briefing ? "Planning…" : "Plan from brief"}
+          </button>
+        </form>
+        {briefResult && (
+          <div className="brief-note">
+            {briefResult.found ? "Filled from your brief and recommended the best set" : "Nothing filled"}
+            {briefResult.source === "groq" && " · AI-written"}
+            {briefResult.source === "rules" && " · simple rules"}
+            {briefResult.assumptions.length > 0 && (
+              <ul>
+                {briefResult.assumptions.map((a) => (
+                  <li key={a}>{a}</li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
+      </section>
 
       {/* ---------- BODY: 3 COLUMNS ---------- */}
       <div className="vayu-body">
@@ -303,6 +383,16 @@ const exportReport = () => {
         <aside className="panel panel-left">
           <h2 className="panel-title">Project</h2>
           <div className="card project-form">
+            <label className="field">
+              <span>Location</span>
+              <select value={building.site} onChange={(e) => updateBuilding({ site: e.target.value })}>
+                {SITE_IDS.map((id) => (
+                  <option key={id} value={id}>
+                    {CLIMATES[id].site.name}
+                  </option>
+                ))}
+              </select>
+            </label>
             <label className="field">
               <span>Building type</span>
               <select value={building.scenario} onChange={(e) => updateBuilding({ scenario: e.target.value })}>
@@ -575,7 +665,7 @@ const exportReport = () => {
             </div>
           </div>
           <p className="climate-source">
-            Design peak {climate.outdoorPeakC} °C from Open-Meteo, Delhi 2015–2024 (May–June). Vertical sun values are still placeholders.
+            Design peak {climate.outdoorPeakC} °C from Open-Meteo, {climate.site.name} 2015–2024 (May–June). Vertical sun values are still placeholders.
           </p>
 
           <h3 className="group-label impact-title">Impact</h3>

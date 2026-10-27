@@ -3,6 +3,7 @@ import * as THREE from "three";
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
 import { getSunPosition } from "../../utils/sunPosition";
+import { climateFor } from "../../engine/climate";
 import { BASE_BUILDING_PALETTE, createThermalGradientMaterial, getThermalGradientColors } from "../../utils/thermal";
 
 const STOREY_H = 3.2;
@@ -182,7 +183,7 @@ function CourtWalls({ y0, courtSide, mats, showJali, showKhusChik }) {
 
 function Scene({ building, hasAangan, showJali, showKhusChik, hasGreenRoof, mats, sunHour }) {
   const { side, courtSide, floors, H } = useMemo(() => layout(building, hasAangan), [building, hasAangan]);
-  const sun = getSunPosition(sunHour);
+  const sun = getSunPosition(sunHour, climateFor(building.site).site);
 
   return (
     <>

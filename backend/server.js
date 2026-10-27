@@ -24,11 +24,14 @@ const MODEL = process.env.GROQ_MODEL || "openai/gpt-oss-20b"; // check the curre
 const inr = (n) => "₹" + Math.round(n).toLocaleString("en-IN");
 
 /** Plain-text explanation built only from the numbers we were given. Used when the AI call fails. */
-function fallbackExplanation({ ids = [], costInr, savedInr, paybackYears, indoorPeakC, baselinePeakC }) {
+function fallbackExplanation({ ids = [], costInr, savedInr, paybackYears, indoorPeakC, baselinePeakC, climate }) {
   if (!ids.length) return "No interventions are needed within this budget.";
   const drop = baselinePeakC - indoorPeakC;
+  const place = climate
+    ? `In ${climate.location}, where the design peak is ${climate.outdoorPeakC.toFixed(1)} °C and afternoon humidity averages ${climate.relHumidityAfternoonPct}%, `
+    : "";
   return (
-    `Applying ${ids.join(", ")} costs ${inr(costInr)} and saves about ${inr(savedInr)} a year, ` +
+    `${place}applying ${ids.join(", ")} costs ${inr(costInr)} and saves about ${inr(savedInr)} a year, ` +
     `with a payback of ${paybackYears.toFixed(1)} years. The indoor peak falls from ` +
     `${baselinePeakC.toFixed(1)} °C to ${indoorPeakC.toFixed(1)} °C, a drop of ${drop.toFixed(1)} °C.`
   );
@@ -47,16 +50,22 @@ app.post("/api/explain", async (req, res) => {
   }
 
   const prompt =
-    "You are explaining a passive-cooling recommendation for a building in Delhi-NCR to an architect. " +
+    "You are explaining a passive-cooling recommendation to an architect. The climate block names the city the building is in. " +
     "Use ONLY the figures in the JSON below. Do not invent numbers. " +
+    "Name the city and quote its figures. Keep the labels exact: outdoorPeakC is the city's outdoor design peak, " +
+    "indoorPeakC is the building's indoor peak after the recommendation, and baselinePeakC is the indoor peak without it. " +
+    "Explain how the climate shapes the choice, using these rules: " +
+    "where afternoon humidity is low (under about 40%), evaporative measures such as khus chik work well; " +
+    "where it is high (over about 70%), they work poorly. " +
+    "Where the night low stays high, night-time ventilation releases less heat. " +
     "The cost, savings and payback apply to the WHOLE set of interventions listed in ids, not to any one of them. " +
-    "Write amounts in Indian format (for example ₹2,10,980). " +
+    "For rupee amounts, use costText and savedText exactly as given in the JSON. Do not reformat them. " +
     "Method descriptions you may use: jali = perforated screen that filters sun; chhajja = deep overhang that blocks high sun; " +
     "aangan = open courtyard that drives air movement; khus chik = wet khus grass screen that cools air by evaporation; " +
     "green roof = vegetation layer that insulates the roof; lime cool roof = light lime wash that reflects sun. " +
-    "Write 3 short sentences in plain English, and mention one traditional Indian method (jali, chhajja, aangan, or khus chik) " +
+    "Write 3 or 4 short sentences in plain English, and mention one traditional Indian method (jali, chhajja, aangan, or khus chik) " +
     "where it fits the recommendation.\n\nJSON:\n" +
-    JSON.stringify(result);
+    JSON.stringify({ ...result, costText: inr(result.costInr), savedText: inr(result.savedInr) });
 
   try {
     const r = await fetch(GROQ_URL, {
@@ -81,6 +90,117 @@ app.post("/api/explain", async (req, res) => {
   } catch (err) {
     console.error("Groq call failed:", err.message);
     return res.json({ text: fallback, source: "template" });
+  }
+});
+
+const SCENARIOS = ["retrofit", "new"];
+const SITE_IDS = ["delhi", "jaipur", "ahmedabad", "kochi"];
+const CITY_PATTERNS = {
+  delhi: /\b(delhi|new delhi|ncr|gurgaon|gurugram|noida|faridabad)\b/,
+  jaipur: /\bjaipur\b/,
+  ahmedabad: /\b(ahmedabad|ahmadabad)\b/,
+  kochi: /\b(kochi|cochin)\b/,
+};
+const RANGES = { floors: [1, 5], footprintM2: [20, Infinity], wwr: [0.1, 0.6], budgetInr: [0, Infinity] };
+const clampTo = (v, [min, max]) => Math.min(max, Math.max(min, v));
+
+/** Keeps only known building fields with usable values, clamped to the same ranges the app uses. */
+function cleanFields(raw = {}) {
+  const out = {};
+  if (SITE_IDS.includes(raw.site)) out.site = raw.site;
+  if (SCENARIOS.includes(raw.scenario)) out.scenario = raw.scenario;
+  for (const key of Object.keys(RANGES)) {
+    const value = raw[key];
+    if (value === null || value === "" || value === undefined || !Number.isFinite(Number(value))) continue;
+    const n = Number(value);
+    out[key] = clampTo(key === "floors" ? Math.round(n) : n, RANGES[key]);
+  }
+  return out;
+}
+
+const UNIT = { k: 1e3, lakh: 1e5, lakhs: 1e5, lac: 1e5, lacs: 1e5, crore: 1e7, crores: 1e7 };
+const WORD_NUMBERS = { one: 1, two: 2, three: 3, four: 4, five: 5 };
+// Only assumptions about inputs the engine actually uses are shown. Roof type, material and energy targets are not inputs yet.
+const ENGINE_TOPIC = /floor|storey|story|footprint|area|m²|m2|sq|budget|cost|₹|rupee|window|wwr|glaz|retrofit|new build|existing|building type|city|location|site/i;
+
+/** Reads the few things a plain sentence reliably gives: floors, floor area, budget and building type. */
+function parseBriefByRules(brief) {
+  const text = brief.toLowerCase();
+  const fields = {};
+  const floors = text.match(/(\d+|one|two|three|four|five)\s*-?\s*(?:storey|storeys|story|stories|floor|floors)/);
+  if (floors) fields.floors = Number(floors[1]) || WORD_NUMBERS[floors[1]];
+  const area = text.match(/(\d+(?:\.\d+)?)\s*(?:m²|m2|sq\.?\s*m|square\s+met(?:er|re)s?)/);
+  if (area) fields.footprintM2 = Number(area[1]);
+  const budget =
+    text.match(/(?:₹|rs\.?|inr)\s*([\d,]+(?:\.\d+)?)\s*(k|lakhs?|lacs?|crores?)?/) ||
+    text.match(/([\d.]+)\s*(lakhs?|lacs?|crores?)\b/);
+  if (budget) {
+    const base = Number(budget[1].replace(/,/g, ""));
+    fields.budgetInr = base * (UNIT[budget[2]] ?? 1);
+  }
+  const city = Object.keys(CITY_PATTERNS).find((id) => CITY_PATTERNS[id].test(text));
+  if (city) fields.site = city;
+  if (/\bnew\s+(build|construction|house|home)|build\s+(a\s+)?new|greenfield/.test(text)) fields.scenario = "new";
+  else if (/retrofit|existing|renovat/.test(text)) fields.scenario = "retrofit";
+  return fields;
+}
+
+app.post("/api/brief", async (req, res) => {
+  const brief = String(req.body?.brief ?? "").trim().slice(0, 1000);
+  if (!brief) return res.status(400).json({ error: "Describe the building first." });
+
+  const ruleFields = cleanFields(parseBriefByRules(brief));
+  const fallback = {
+    fields: ruleFields,
+    assumptions: Object.keys(ruleFields).length
+      ? ["Read with simple rules: only floors, floor area, budget and building type were picked up."]
+      : ["Nothing in the brief could be read. Set the fields by hand."],
+    source: "rules",
+  };
+
+  if (!process.env.GROQ_API_KEY) return res.json(fallback);
+
+  const prompt =
+    "Read this brief for a building in Delhi-NCR and return ONLY a JSON object with these keys. " +
+    'scenario: "retrofit" for an existing building, "new" for a new build. ' +
+    "site: the city the building is in, one of delhi, jaipur, ahmedabad, kochi. " +
+    "floors: whole number from 1 to 5. " +
+    "footprintM2: floor area per floor in square metres. " +
+    "wwr: window-to-wall ratio from 0.1 to 0.6. " +
+    "budgetInr: budget in rupees as a plain number, so 3 lakh is 300000. " +
+    "assumptions: up to 3 short strings naming anything the brief leaves unstated that affects floors, floor area, budget, window-to-wall ratio or building type. " +
+    "Only include a key when the brief states or clearly implies its value. Never guess a number. " +
+    "Leave out any key the brief does not mention, except assumptions. Output nothing but the JSON.\n\nBrief:\n" +
+    brief;
+
+  try {
+    const r = await fetch(GROQ_URL, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: MODEL,
+        messages: [{ role: "user", content: prompt }],
+        temperature: 0,
+        max_tokens: 800,
+        reasoning_effort: "low",
+      }),
+    });
+    if (!r.ok) throw new Error(`Groq responded ${r.status}`);
+    const data = await r.json();
+    const text = data.choices?.[0]?.message?.content ?? "";
+    const parsed = JSON.parse(text.match(/\{[\s\S]*\}/)?.[0] ?? "");
+    const fields = cleanFields(parsed);
+    if (!Object.keys(fields).length) throw new Error("no usable fields");
+    const assumptions = Array.isArray(parsed.assumptions)
+      ? parsed.assumptions.map(String).filter((a) => ENGINE_TOPIC.test(a)).slice(0, 3)
+      : [];
+    return res.json({ fields, assumptions, source: "groq" });
+  } catch (err) {
+    console.error("Brief parse fell back to rules:", err.message);
+    return res.json(fallback);
   }
 });
 
