@@ -34,14 +34,14 @@ function regretBands(values) {
   return { counts, labels };
 }
 
-const footprintLabels = report.sampling.footprintBins.map((_, i) => {
-  const [lo, hi] = report.sampling.footprintRange;
-  return String(Math.round(lo + ((hi - lo) / report.sampling.footprintBins.length) * i));
-});
-const wwrLabels = report.sampling.wwrBins.map((_, i) => {
-  const [lo, hi] = report.sampling.wwrRange;
-  return `${Math.round((lo + ((hi - lo) / report.sampling.wwrBins.length) * i) * 100)}%`;
-});
+/** Labels such as "20–48" for each bin, from the bin edges that were used when the data was counted. */
+function rangeLabels(bins, [lo, hi], format = (v) => String(v)) {
+  const step = (hi - lo) / bins.length;
+  return bins.map((_, i) => `${format(Math.round(lo + step * i))}–${format(Math.round(lo + step * (i + 1)))}`);
+}
+const footprintLabels = rangeLabels(report.sampling.footprintBins, report.sampling.footprintRange);
+const wwrLabels = rangeLabels(report.sampling.wwrBins, report.sampling.wwrRange, (v) => `${Math.round(v * 100)}`);
+const floorLabels = Object.keys(report.sampling.floorsCounts).map((f) => (f === "1" ? "1 floor" : `${f} floors`));
 
 const METRIC_ROWS = [
   { key: "indoorPeakC", label: "Indoor peak (°C)", digits: 2 },
@@ -221,13 +221,34 @@ export default function MlAnalysis() {
           />
         </Card>
 
-        <Card title="Floors in the training set" sub="Samples are spread evenly across 1–5 floors.">
-          <Histogram values={Object.values(report.sampling.floorsCounts)} labels={Object.keys(report.sampling.floorsCounts)} color={PALETTE[4]} />
+        <Card title="Buildings by number of floors" sub="How many of the 5,000 training examples have each floor count. The counts are almost equal, so no height dominates.">
+          <Histogram
+            values={Object.values(report.sampling.floorsCounts)}
+            labels={floorLabels}
+            color={PALETTE[2]}
+            yTitle="Number of examples"
+            xTitle="Floors in the building"
+          />
         </Card>
-        <Card title="Footprint and window ratio ranges" sub="Footprint in m² per floor, window-to-wall ratio across 0.1–0.6.">
-          <Histogram values={report.sampling.footprintBins} labels={footprintLabels} color={PALETTE[0]} />
-          <div className="spacer" />
-          <Histogram values={report.sampling.wwrBins} labels={wwrLabels} color={PALETTE[5]} />
+        <Card title="Footprint per floor" sub="How many training examples fall in each range of floor area. Each bar covers the range printed under it.">
+          <Histogram
+            values={report.sampling.footprintBins}
+            labels={footprintLabels}
+            tiltLabels
+            color={PALETTE[2]}
+            yTitle="Number of examples"
+            xTitle="Floor area per floor (m²)"
+          />
+        </Card>
+        <Card title="Window-to-wall ratio" sub="The share of each wall that is glass. Each bar covers the range printed under it, in percent.">
+          <Histogram
+            values={report.sampling.wwrBins}
+            labels={wwrLabels}
+            tiltLabels
+            color={PALETTE[2]}
+            yTitle="Number of examples"
+            xTitle="Window-to-wall ratio (%)"
+          />
         </Card>
 
         <Card title="How often each intervention appears" sub="Share of all 5,000 samples that include it. Only options allowed for the building type are sampled.">

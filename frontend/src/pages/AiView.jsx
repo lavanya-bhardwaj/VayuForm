@@ -158,6 +158,30 @@ export default function AiView({ aiLog, onRecord, view }) {
       ]
     : [];
 
+  // The main chart: shown first on the page whenever there is a recommendation.
+  const heroChart = view && (
+    <section className="hero-chart page-card">
+      <div className="hero-chart-head">
+        <div>
+          <span className="page-kicker">Live recommendation · {view.location}</span>
+          <h2>How each technique brings the indoor peak down</h2>
+          <p className="page-card-sub">Hover a point for the values at that step. The line draws in from left to right each time this page opens.</p>
+        </div>
+        <div className="hero-chart-total">
+          <strong>−{(view.breakdown.baselinePeakC - view.breakdown.finalPeakC).toFixed(1)} °C</strong>
+          <span>
+            {view.breakdown.baselinePeakC.toFixed(1)} → {view.breakdown.finalPeakC.toFixed(1)} °C design-day peak
+          </span>
+        </div>
+      </div>
+      {steps.length ? (
+        <TraceLine tall points={tracePoints} labels={traceLabels} details={traceDetails} />
+      ) : (
+        <p className="page-card-sub">No techniques in the recommendation, so the peak stays at the baseline.</p>
+      )}
+    </section>
+  );
+
   // ----- activity charts from the call log -----
   const bySource = Object.keys(SOURCE)
     .map((k) => ({ label: SOURCE[k].label, value: aiLog.filter((e) => e.source === k).length, color: SOURCE[k].color }))
@@ -170,6 +194,7 @@ export default function AiView({ aiLog, onRecord, view }) {
 
   return (
     <div className="page-body">
+      {heroChart}
       <header className="page-hero">
         <span className="page-kicker">AI view</span>
         <h1>How VayuForm uses AI, and the breakdown of this recommendation</h1>
@@ -261,14 +286,7 @@ export default function AiView({ aiLog, onRecord, view }) {
           </Card>
 
           <div className="chart-grid">
-            <Card title="Indoor peak, step by step" sub="Each point is the peak after adding one more technique. Hover a point for the values. Drawn from left to right as the page opens.">
-              {steps.length ? (
-                <TraceLine points={tracePoints} labels={traceLabels} details={traceDetails} />
-              ) : (
-                <p className="page-card-sub">No techniques in the recommendation, so the peak stays at the baseline.</p>
-              )}
-            </Card>
-            <Card title="Temperature drop from each technique" sub="How much each technique lowers the peak on its own. Hover a bar for more.">
+            <Card title="Temperature drop from each technique" wide sub="How much each technique lowers the peak on its own. Hover a bar for more.">
               {steps.length ? (
                 <GrowBars items={drops} details={dropDetails} format={(v) => `−${v.toFixed(2)}`} color="var(--accent)" />
               ) : (

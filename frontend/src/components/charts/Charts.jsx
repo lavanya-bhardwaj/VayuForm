@@ -44,15 +44,22 @@ export function BarList({ items, format = (v) => v.toLocaleString("en-IN"), colo
 }
 
 /** Vertical bars with labels underneath. */
-export function Histogram({ values, labels, color = "var(--primary)", height = 180 }) {
+export function Histogram({ values, labels, color = "var(--primary)", height = 200, xTitle, yTitle, tiltLabels = false }) {
   const width = 360;
-  const pad = { top: 12, right: 8, bottom: 40, left: 8 };
+  const pad = { top: yTitle ? 30 : 12, right: 8, bottom: tiltLabels ? 78 : xTitle ? 62 : 40, left: 8 };
   const max = Math.max(1e-9, ...values);
   const slot = (width - pad.left - pad.right) / values.length;
   const barW = slot * 0.7;
   const plotH = height - pad.top - pad.bottom;
+  // Tilted labels start just under the bars, so the axis title below them has room.
+  const labelY = tiltLabels ? height - pad.bottom + 14 : height - 22;
   return (
     <svg viewBox={`0 0 ${width} ${height}`} className="chart-svg" role="img">
+      {yTitle && (
+        <text x={pad.left} y={14} className="chart-axis-label">
+          {yTitle}
+        </text>
+      )}
       {values.map((v, i) => {
         const h = (v / max) * plotH;
         const x = pad.left + i * slot + (slot - barW) / 2;
@@ -62,12 +69,23 @@ export function Histogram({ values, labels, color = "var(--primary)", height = 1
             <text x={x + barW / 2} y={pad.top + plotH - h - 4} textAnchor="middle" className="chart-tick">
               {v}
             </text>
-            <text x={x + barW / 2} y={height - 22} textAnchor="middle" className="chart-tick">
+            <text
+              x={x + barW / 2}
+              y={labelY}
+              textAnchor={tiltLabels ? "end" : "middle"}
+              transform={tiltLabels ? `rotate(-40 ${x + barW / 2} ${labelY})` : undefined}
+              className="chart-tick"
+            >
               {labels[i]}
             </text>
           </g>
         );
       })}
+      {xTitle && (
+        <text x={width / 2} y={height - 4} textAnchor="middle" className="chart-axis-label">
+          {xTitle}
+        </text>
+      )}
     </svg>
   );
 }
