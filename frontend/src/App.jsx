@@ -14,6 +14,8 @@ import { getSunTimes, getOutdoorTemperature } from "./utils/sunPosition";
 import climate from "./data/climate/delhi.json";
 import "./App.css";
 
+const API_URL = "http://localhost:3001";
+
 const VIEW_MODES = [
   { id: "exterior", label: "3D Exterior" },
   { id: "courtyard", label: "Courtyard" },
@@ -46,7 +48,10 @@ function App() {
   const [tintOpacity, setTintOpacity] = useState(0.58);
   const [showControls, setShowControls] = useState(false);
   const [recommendation, setRecommendation] = useState(null);
+  const [explanation, setExplanation] = useState(null);
+  const [explaining, setExplaining] = useState(false);
   const [viewMode, setViewMode] = useState("exterior");
+  const [compare, setCompare] = useState("after");
 
   // Sun position: hour of day (0-24)
   const { sunrise, sunset } = getSunTimes();
@@ -96,9 +101,41 @@ function App() {
   const runOptimiser = () => {
     const result = optimise(building);
     setRecommendation(result);
+    setExplanation(null);
     if (result.best) {
       setActive(result.best.ids);
       setOverrideScore(null);
+    }
+  };
+
+  // Sends the best set's figures to the local backend. The backend returns AI text, or template text if it can't reach the model.
+  const explainBest = async () => {
+    const best = recommendation?.best;
+    if (!best) return;
+    setExplaining(true);
+    setExplanation(null);
+    try {
+      const r = await fetch(`${API_URL}/api/explain`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ids: best.ids.map(nameOf),
+          costInr: Math.round(best.costInr),
+          savedInr: Math.round(best.savedInr),
+          paybackYears: Math.round(best.paybackYears * 10) / 10,
+          indoorPeakC: Math.round(best.indoorPeakC * 10) / 10,
+          baselinePeakC: Math.round(baseline.indoorPeakC * 10) / 10,
+        }),
+      });
+      if (!r.ok) throw new Error(`status ${r.status}`);
+      setExplanation(await r.json());
+    } catch {
+      setExplanation({
+        text: "Could not reach the explanation service. Check that the backend is running on port 3001.",
+        source: "error",
+      });
+    } finally {
+      setExplaining(false);
     }
   };
 
@@ -109,6 +146,16 @@ function App() {
     setTintOpacity(0.58);
     setRecommendation(null);
   };
+
+  // Numbers shown in the Building Analysis card: the building as it is today, or with the selected interventions.
+  const shown =
+    compare === "before"
+      ? {
+          score: baseline.thermalScore,
+          indoorPeakC: baseline.indoorPeakC + (currentOutdoorTemp - climate.outdoorPeakC),
+          coolingKwh: impact.coolingKwh + impact.savedKwh,
+        }
+      : { score: thermalScore, indoorPeakC: adjustedCurrent.indoorPeakC, coolingKwh: impact.coolingKwh };
 
   const groups = [...new Set(candidates.map((c) => c.category))];
   const nameOf = (id) => candidates.find((c) => c.id === id)?.name ?? id;
@@ -383,13 +430,21 @@ function App() {
         <aside className="panel panel-right">
           <h2 className="panel-title">Building Analysis</h2>
 
+          <div className="compare-switch">
+            {["before", "after"].map((m) => (
+              <button key={m} className={compare === m ? "on" : ""} onClick={() => setCompare(m)}>
+                {m === "before" ? "Before" : "After"}
+              </button>
+            ))}
+          </div>
+
           <div className="card">
             <div className="metric">
               <span className="metric-label">Solar Exposure</span>
-              <span className={`metric-value ${level(thermalScore) === "HIGH" ? "hot" : ""}`}>
-                {level(thermalScore)}
+              <span className={`metric-value ${level(shown.score) === "HIGH" ? "hot" : ""}`}>
+                {level(shown.score)}
               </span>
-              <Meter score={thermalScore} />
+              <Meter score={shown.score} />
             </div>
             <div className="metric">
               <span className="metric-label">Outdoor temperature (now)</span>
@@ -400,16 +455,16 @@ function App() {
             <div className="metric">
               <span className="metric-label">Indoor peak temperature</span>
               <span className="metric-value">
-                {adjustedCurrent.indoorPeakC.toFixed(1)} <small>°C</small>
+                {shown.indoorPeakC.toFixed(1)} <small>°C</small>
               </span>
               <div className="bar">
-                <div className="bar-fill" style={{ width: `${Math.min(100, ((current.indoorPeakC - 28) / 20) * 100)}%` }} />
+                <div className="bar-fill" style={{ width: `${Math.min(100, ((shown.indoorPeakC - 28) / 20) * 100)}%` }} />
               </div>
             </div>
             <div className="metric">
               <span className="metric-label">Cooling demand (est.)</span>
               <span className="metric-value">
-                {Math.round(impact.coolingKwh).toLocaleString("en-IN")} <small>kWh / yr</small>
+                {Math.round(shown.coolingKwh).toLocaleString("en-IN")} <small>kWh / yr</small>
               </span>
             </div>
           </div>
@@ -470,6 +525,19 @@ function App() {
                   <span className="metric-label">No combination fits this budget.</span>
                 )}
               </div>
+              {recommendation.best?.ids.length > 0 && (
+                <button className="btn solid explain-btn" onClick={explainBest} disabled={explaining}>
+                  {explaining ? "Writing explanation…" : "Explain this recommendation"}
+                </button>
+              )}
+              {explanation && (
+                <p className="explanation">
+                  {explanation.text}
+                  <small className="explain-source">
+                    {explanation.source === "groq" ? "AI-written" : explanation.source === "template" ? "Template text" : "Error"}
+                  </small>
+                </p>
+              )}
             </div>
           )}
         </aside>

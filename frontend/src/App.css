@@ -112,6 +112,16 @@ button { font: inherit; cursor: pointer; }
   background: transparent; color: var(--muted); font: inherit; font-size: 13px;
 }
 .view-switch button.on { background: var(--primary); color: #fff; }
+
+.compare-switch {
+  display: flex; gap: 4px; padding: 4px; margin-bottom: 12px;
+  background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+}
+.compare-switch button {
+  flex: 1; padding: 6px 12px; border: none; border-radius: 7px;
+  background: transparent; color: var(--muted); font: inherit; font-size: 13px;
+}
+.compare-switch button.on { background: var(--primary); color: #fff; }
 .dev-controls { max-height: 40%; overflow-y: auto; padding: 12px; background: #1a1a1f; }
 
 /* ---------- intervention cards ---------- */
@@ -174,4 +184,7 @@ button { font: inherit; cursor: pointer; }
 .hindi { font-weight: 400; color: var(--muted); font-size: 12px; }
 .rec-card { margin-top: 16px; }
 .rec-card .metric-value { font-size: 16px; }
+.explain-btn { width: 100%; margin: 12px 0 4px; }
+.explanation { font-size: 13px; line-height: 1.5; color: var(--ink); margin: 10px 0 14px; }
+.explain-source { display: block; margin-top: 6px; font-size: 11px; color: var(--muted); }
 
