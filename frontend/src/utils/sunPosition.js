@@ -12,11 +12,11 @@ export function getSunPosition(hourOfDay, at = DEFAULT_AT) {
 
   const sunPos = SunCalc.getPosition(date, at.lat, at.lon);
 
-  // azimuth: 0 = N, π/2 = E, π = S, 3π/2 = W
-  // altitude: 0 = horizon, π/2 = zenith
-
-  const altitude = sunPos.altitude;
-  const azimuth = sunPos.azimuth;
+  // suncalc 2.x returns degrees, with azimuth clockwise from north (0 = N, 90 = E, 180 = S).
+  // Convert to radians here so the rest of the scene can use radians.
+  const DEG = Math.PI / 180;
+  const altitude = sunPos.altitude * DEG; // 0 = horizon, π/2 = zenith
+  const azimuth = sunPos.azimuth * DEG; // 0 = N, π/2 = E, π = S, 3π/2 = W
 
   // Only return valid position if sun is above horizon
   if (altitude < 0) return null;

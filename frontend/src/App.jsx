@@ -2,7 +2,7 @@ import { useMemo, useState, useEffect } from "react";
 import { jsPDF } from "jspdf";
 import BuildingScene from "./components/3d/BuildingScene";
 import ThermalSlider from "./components/ui/ThermalSlider";
-import AanganInterior from "./components/3d/AanganInterior";
+import InteriorView from "./components/3d/InteriorView";
 import { analyse, annualImpact, buildGeometry, interventionCostInr } from "./engine/heatModel";
 import { BUILDING_LIMITS, DEFAULT_BUILDING, sanitiseBuilding } from "./engine/building";
 import { interventionsFor } from "./engine/interventions";
@@ -20,7 +20,7 @@ const API_URL = "http://localhost:3001";
 
 const VIEW_MODES = [
   { id: "exterior", label: "3D Exterior" },
-  { id: "courtyard", label: "Courtyard" },
+  { id: "interior", label: "Interior" },
 ];
 
 const SCENARIOS = [
@@ -556,15 +556,11 @@ const exportReport = () => {
                 </button>
               ))}
             </div>
-            {viewMode !== "exterior" && (
-              <AanganInterior
+            {viewMode === "interior" && (
+              <InteriorView
                 building={building}
+                hasJali={applied.includes("jali")}
                 hasAangan={applied.includes("aangan")}
-                showJali={applied.includes("jali")}
-                showKhusChik={applied.includes("khus-chik")}
-                hasGreenRoof={applied.includes("green-roof")}
-                thermalScore={thermalScore}
-                tintOpacity={tintOpacity}
                 sunHour={sunHour}
               />
             )}
