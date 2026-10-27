@@ -1,5 +1,6 @@
 import express from "express";
 import dotenv from "dotenv";
+import * as surrogate from "./ml/surrogate.js";
 
 dotenv.config();
 
@@ -277,6 +278,23 @@ app.post("/api/refine", async (req, res) => {
   } catch (err) {
     console.error("Refine fell back to rules:", err.message);
     return res.json(fallback);
+  }
+});
+
+// Surrogate model routes. No AI call and no network: the model runs locally in a few microseconds.
+app.post("/api/ml/predict", (req, res) => {
+  try {
+    return res.json(surrogate.predict(req.body?.building ?? {}, req.body?.ids ?? []));
+  } catch (err) {
+    return res.status(400).json({ error: err.message });
+  }
+});
+
+app.post("/api/ml/optimize", (req, res) => {
+  try {
+    return res.json(surrogate.optimise(req.body?.building ?? {}));
+  } catch (err) {
+    return res.status(400).json({ error: err.message });
   }
 });
 
