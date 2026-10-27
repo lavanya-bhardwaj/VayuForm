@@ -5,13 +5,7 @@ import { INTERVENTIONS } from "./interventions";
 const FACADES = ["N", "E", "S", "W"];
 const COURTYARD_SHARE = 0.15;
 
-export const DEFAULT_BUILDING = {
-  floors: 2,
-  footprintM2: 100,
-  wwr: 0.2,
-  budgetInr: 300000,
-  scenario: "retrofit",
-};
+export { DEFAULT_BUILDING } from "./building";
 
 /**
  * Merges the effects of the chosen interventions into one set of envelope values.

@@ -31,7 +31,7 @@ export function runValidation() {
   }
 
   // Test 2: Glazing area
-  const expectedGlazing = expectedGrossPerFacade * DEFAULT_BUILDING.wwr.N;
+  const expectedGlazing = expectedGrossPerFacade * DEFAULT_BUILDING.wwr;
   if (Math.abs(geo.facades.N.glazingM2 - expectedGlazing) < 0.1) {
     results.passed.push('Geometry: Per-facade glazing area (20% wwr)');
   } else {

@@ -3,7 +3,8 @@ import { jsPDF } from "jspdf";
 import BuildingScene from "./components/3d/BuildingScene";
 import ThermalSlider from "./components/ui/ThermalSlider";
 import AanganInterior from "./components/3d/AanganInterior";
-import { DEFAULT_BUILDING, analyse, annualImpact, buildGeometry, interventionCostInr } from "./engine/heatModel";
+import { analyse, annualImpact, buildGeometry, interventionCostInr } from "./engine/heatModel";
+import { BUILDING_LIMITS, DEFAULT_BUILDING, sanitiseBuilding } from "./engine/building";
 import { interventionsFor } from "./engine/interventions";
 import { optimise, totalCostInr } from "./engine/optimizer";
 import { runValidation } from "./engine/validation";
@@ -44,7 +45,9 @@ function Meter({ score }) {
 
 function App() {
   const [building, setBuilding] = useState(DEFAULT_BUILDING);
-  const [active, setActive] = useState([]);
+  // The selected interventions live on the building, so they travel with it.
+  const active = building.interventions;
+  const setActive = (ids) => setBuilding((b) => sanitiseBuilding({ ...b, interventions: ids }));
   const [overrideScore, setOverrideScore] = useState(null);
   const [tintOpacity, setTintOpacity] = useState(0.58);
   const [showControls, setShowControls] = useState(false);
@@ -90,13 +93,13 @@ function App() {
   }, [sunHour, current, currentOutdoorTemp]);
 
   const updateBuilding = (patch) => {
-    setBuilding((b) => ({ ...b, ...patch }));
+    setBuilding((b) => sanitiseBuilding({ ...b, ...patch }));
     setOverrideScore(null);
   };
 
   const toggle = (id) => {
     setOverrideScore(null);
-    setActive((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
+    setActive(active.includes(id) ? active.filter((x) => x !== id) : [...active, id]);
   };
 
   const runOptimiser = () => {
@@ -142,7 +145,6 @@ function App() {
 
   const reset = () => {
     setBuilding(DEFAULT_BUILDING);
-    setActive([]);
     setOverrideScore(null);
     setTintOpacity(0.58);
     setRecommendation(null);
@@ -315,30 +317,30 @@ const exportReport = () => {
               <span>Floors</span>
               <input
                 type="number"
-                min="1"
-                max="5"
+                min={BUILDING_LIMITS.floors.min}
+                max={BUILDING_LIMITS.floors.max}
                 value={building.floors}
-                onChange={(e) => updateBuilding({ floors: Math.max(1, Number(e.target.value) || 1) })}
+                onChange={(e) => updateBuilding({ floors: e.target.value })}
               />
             </label>
             <label className="field">
               <span>Footprint per floor (m²)</span>
               <input
                 type="number"
-                min="20"
+                min={BUILDING_LIMITS.footprintM2.min}
                 step="10"
                 value={building.footprintM2}
-                onChange={(e) => updateBuilding({ footprintM2: Math.max(20, Number(e.target.value) || 20) })}
+                onChange={(e) => updateBuilding({ footprintM2: e.target.value })}
               />
             </label>
             <label className="field">
               <span>Budget (₹)</span>
               <input
                 type="number"
-                min="0"
+                min={BUILDING_LIMITS.budgetInr.min}
                 step="10000"
                 value={building.budgetInr}
-                onChange={(e) => updateBuilding({ budgetInr: Math.max(0, Number(e.target.value) || 0) })}
+                onChange={(e) => updateBuilding({ budgetInr: e.target.value })}
               />
             </label>
             <label className="field">
@@ -346,11 +348,11 @@ const exportReport = () => {
               <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                 <input
                   type="range"
-                  min="0.1"
-                  max="0.6"
+                  min={BUILDING_LIMITS.wwr.min}
+                  max={BUILDING_LIMITS.wwr.max}
                   step="0.05"
                   value={building.wwr}
-                  onChange={(e) => updateBuilding({ wwr: Number(e.target.value) })}
+                  onChange={(e) => updateBuilding({ wwr: e.target.value })}
                   style={{ flex: 1 }}
                 />
                 <span style={{ minWidth: '45px', fontSize: '0.9em', fontWeight: 'bold' }}>
