@@ -22,6 +22,9 @@ export const DEFAULT_BUILDING = {
   wwr: 0.2,
   budgetInr: 300000,
   interventions: [],
+  // Follow-up constraints from the user. Excluded ids are never recommended. Required ids must be in every recommendation.
+  excluded: [],
+  required: [],
 };
 
 const finite = (value, fallback) => (Number.isFinite(Number(value)) && value !== "" ? Number(value) : fallback);
@@ -33,7 +36,11 @@ const clamp = (value, { min, max = Infinity }) => Math.min(max, Math.max(min, va
  */
 export function sanitiseBuilding(input = {}) {
   const b = { ...DEFAULT_BUILDING, ...input };
+  const excluded = Array.isArray(b.excluded) ? [...new Set(b.excluded)] : [];
+  const required = Array.isArray(b.required) ? [...new Set(b.required)].filter((id) => !excluded.includes(id)) : [];
   return {
+    excluded,
+    required,
     site: SITE_IDS.includes(b.site) ? b.site : DEFAULT_BUILDING.site,
     scenario: SCENARIO_OPTIONS.includes(b.scenario) ? b.scenario : DEFAULT_BUILDING.scenario,
     floors: clamp(Math.round(finite(b.floors, DEFAULT_BUILDING.floors)), BUILDING_LIMITS.floors),

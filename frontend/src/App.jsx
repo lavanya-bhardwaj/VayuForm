@@ -61,6 +61,9 @@ function App() {
   const [brief, setBrief] = useState("");
   const [briefing, setBriefing] = useState(false);
   const [briefResult, setBriefResult] = useState(null);
+  const [refineText, setRefineText] = useState("");
+  const [refining, setRefining] = useState(false);
+  const [refineNote, setRefineNote] = useState(null);
 
   // Sun position: hour of day (0-24)
   const { sunrise, sunset } = getSunTimes(undefined, climate.site);
@@ -72,7 +75,10 @@ function App() {
     runValidation();
   }, []);
 
-  const candidates = useMemo(() => interventionsFor(building.scenario), [building.scenario]);
+  const candidates = useMemo(
+    () => interventionsFor(building.scenario).filter((c) => !building.excluded.includes(c.id)),
+    [building.scenario, building.excluded]
+  );
   // Drop interventions that don't fit the chosen scenario, e.g. rat-trap walls after switching to retrofit.
   const applied = useMemo(
     () => active.filter((id) => candidates.some((c) => c.id === id)),
@@ -103,6 +109,7 @@ function App() {
   };
 
   const toggle = (id) => {
+    if (building.excluded.includes(id)) return; // left out by a follow-up; remove it from the chips first
     setOverrideScore(null);
     setActive(active.includes(id) ? active.filter((x) => x !== id) : [...active, id]);
   };
@@ -153,6 +160,60 @@ function App() {
     } finally {
       setExplaining(false);
     }
+  };
+
+  // Saves the building's constraints, re-runs the optimiser and applies the best set under them.
+  const applyConstraints = (next) => {
+    setBuilding(next);
+    setOverrideScore(null);
+    const result = optimise(next);
+    setRecommendation(result);
+    setExplanation(null);
+    if (result.best) setActive(result.best.ids);
+    return result;
+  };
+
+  // Reads a follow-up such as "I don't want aangan, suggest something else" into exclusions and requirements.
+  const refineRecommendation = async () => {
+    if (!refineText.trim()) return;
+    setRefining(true);
+    setRefineNote(null);
+    try {
+      const r = await fetch(`${API_URL}/api/refine`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: refineText }),
+      });
+      if (!r.ok) throw new Error(`status ${r.status}`);
+      const data = await r.json();
+      const excluded = [...new Set([...building.excluded, ...data.exclude])].filter((id) => !data.include.includes(id));
+      const required = [...new Set([...building.required, ...data.include])].filter((id) => !data.exclude.includes(id));
+      const next = sanitiseBuilding({
+        ...building,
+        excluded,
+        required,
+        ...(data.budgetInr !== undefined ? { budgetInr: data.budgetInr } : {}),
+      });
+      const result = applyConstraints(next);
+      const changed = data.exclude.length + data.include.length + (data.budgetInr !== undefined ? 1 : 0);
+      const parts = [];
+      if (data.exclude.length) parts.push(`Left out ${data.exclude.map(nameOf).join(", ")}`);
+      if (data.include.length) parts.push(`Required ${data.include.map(nameOf).join(", ")}`);
+      if (data.budgetInr !== undefined) parts.push(`Budget set to ${inr(data.budgetInr)}`);
+      const text = changed
+        ? `${parts.join(". ")}. ${result.best ? "Re-ran the recommendation." : "Nothing fits these limits."}`
+        : "No change from that follow-up. Name an intervention, for example \"no aangan\", or a budget.";
+      setRefineNote({ text, source: data.source });
+      setRefineText("");
+    } catch {
+      setRefineNote({ text: "Could not reach the follow-up service. Check that the backend is running on port 3001.", source: "error" });
+    } finally {
+      setRefining(false);
+    }
+  };
+
+  const removeConstraint = (kind, id) => {
+    applyConstraints(sanitiseBuilding({ ...building, [kind]: building[kind].filter((x) => x !== id) }));
   };
 
   // Reads the brief, fills the form, then runs the recommendation and applies the best set.
@@ -709,6 +770,48 @@ const exportReport = () => {
 
           {recommendation && (
             <div className="card rec-card">
+              <form
+                className="refine-form"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  refineRecommendation();
+                }}
+              >
+                <label className="field">
+                  <span>Follow-up on the recommendation</span>
+                  <input
+                    type="text"
+                    maxLength={500}
+                    placeholder="e.g. I don't want aangan, suggest something else"
+                    value={refineText}
+                    onChange={(e) => setRefineText(e.target.value)}
+                  />
+                </label>
+                <button className="btn solid" type="submit" disabled={refining || !refineText.trim()}>
+                  {refining ? "Re-planning…" : "Update recommendation"}
+                </button>
+              </form>
+              {(building.excluded.length > 0 || building.required.length > 0) && (
+                <div className="constraint-chips">
+                  {building.excluded.map((id) => (
+                    <button key={`x-${id}`} className="constraint-chip" onClick={() => removeConstraint("excluded", id)}>
+                      Not {nameOf(id)} ✕
+                    </button>
+                  ))}
+                  {building.required.map((id) => (
+                    <button key={`r-${id}`} className="constraint-chip" onClick={() => removeConstraint("required", id)}>
+                      Must have {nameOf(id)} ✕
+                    </button>
+                  ))}
+                </div>
+              )}
+              {refineNote && (
+                <p className="refine-note">
+                  {refineNote.text}
+                  {refineNote.source === "groq" && " · AI-understood"}
+                  {refineNote.source === "rules" && " · simple rules"}
+                </p>
+              )}
               <div className="metric">
                 <span className="metric-label">Best within {inr(building.budgetInr)}</span>
                 {recommendation.best ? (

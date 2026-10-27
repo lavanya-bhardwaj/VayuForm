@@ -204,4 +204,80 @@ app.post("/api/brief", async (req, res) => {
   }
 });
 
+// Every intervention id the app knows, with words a user might write for it.
+const CATALOGUE = {
+  jali: ["jali", "jaali"],
+  chhajja: ["chhajja", "overhang"],
+  aangan: ["aangan", "angan", "courtyard"],
+  "lime-cool-roof": ["lime", "cool roof", "whitewash"],
+  "green-roof": ["green roof", "vegetation roof", "garden roof", "green"],
+  "rat-trap-wall": ["rat-trap", "rat trap", "cavity wall"],
+  "khus-chik": ["khus", "khus chik"],
+  "clerestory-vent": ["clerestory", "roshandan", "ventilator"],
+};
+const NEGATIVE = /n't|\bnot\b|\bno\b|\bwithout\b|\bremove\b|\bavoid\b|\bexclude\b|\bskip\b|\binstead\b|\bdrop\b|\bdon'?t\b/;
+
+const idsIn = (text) => Object.keys(CATALOGUE).filter((id) => CATALOGUE[id].some((name) => text.includes(name)));
+
+/** Splits a follow-up into clauses and reads each one as a want (include) or a don't-want (exclude). */
+function parseRefineByRules(message) {
+  const text = message.toLowerCase();
+  const exclude = new Set();
+  const include = new Set();
+  for (const clause of text.split(/,|;|\bbut\b|\band\b|\bthen\b/)) {
+    const ids = idsIn(clause);
+    if (!ids.length) continue;
+    const target = NEGATIVE.test(clause) ? exclude : include;
+    ids.forEach((id) => target.add(id));
+  }
+  const result = { exclude: [...exclude], include: [...include] };
+  const budget = text.match(/(\d+(?:\.\d+)?)\s*(?:lakh|lac)s?\b/);
+  if (budget) result.budgetInr = Number(budget[1]) * 1e5;
+  return result;
+}
+
+app.post("/api/refine", async (req, res) => {
+  const message = String(req.body?.message ?? "").trim().slice(0, 500);
+  if (!message) return res.status(400).json({ error: "Write a follow-up first." });
+
+  const fallback = { ...parseRefineByRules(message), source: "rules" };
+  if (!process.env.GROQ_API_KEY) return res.json(fallback);
+
+  const prompt =
+    "A user is refining a passive-cooling recommendation for a building. Read their follow-up and return ONLY a JSON object: " +
+    `{"exclude": [ids the user does not want], "include": [ids the user wants kept or added], "budgetInr": number, only if they state a budget}. ` +
+    `Allowed ids: ${Object.keys(CATALOGUE).join(", ")}. ` +
+    "Use only these ids. If the user only says to suggest something else, leave both lists empty. Output nothing but the JSON.\n\nFollow-up:\n" +
+    message;
+
+  try {
+    const r = await fetch(GROQ_URL, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: MODEL,
+        messages: [{ role: "user", content: prompt }],
+        temperature: 0,
+        max_tokens: 400,
+        reasoning_effort: "low",
+      }),
+    });
+    if (!r.ok) throw new Error(`Groq responded ${r.status}`);
+    const data = await r.json();
+    const text = data.choices?.[0]?.message?.content ?? "";
+    const parsed = JSON.parse(text.match(/\{[\s\S]*\}/)?.[0] ?? "");
+    const known = (list) => (Array.isArray(list) ? list.filter((id) => id in CATALOGUE) : []);
+    const budget = Number(parsed.budgetInr);
+    const result = { exclude: known(parsed.exclude), include: known(parsed.include), source: "groq" };
+    if (Number.isFinite(budget) && budget >= 0) result.budgetInr = budget;
+    return res.json(result);
+  } catch (err) {
+    console.error("Refine fell back to rules:", err.message);
+    return res.json(fallback);
+  }
+});
+
 app.listen(PORT, () => console.log(`VayuForm backend on http://localhost:${PORT}`));

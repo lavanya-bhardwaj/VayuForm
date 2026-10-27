@@ -43,6 +43,14 @@ button { font: inherit; cursor: pointer; }
   flex: 1; min-width: 0; padding: 10px 14px; border-radius: 8px;
   border: 1px solid var(--border); background: var(--bg); color: var(--ink); font: inherit; font-size: 14px;
 }
+.refine-form { display: flex; flex-direction: column; gap: 8px; padding: 12px 0 8px; border-bottom: 1px solid var(--border); }
+.refine-note { font-size: 12px; line-height: 1.4; color: var(--muted); margin: 8px 0 0; }
+.constraint-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.constraint-chip {
+  padding: 4px 10px; border-radius: 999px; border: 1px solid var(--border);
+  background: var(--card); color: var(--ink); font: inherit; font-size: 12px;
+}
+.constraint-chip:hover { border-color: var(--accent); }
 .btn.brief-btn { padding: 10px 18px; white-space: nowrap; background: var(--accent); border-color: var(--accent); color: #fff; }
 .btn.brief-btn:hover:not(:disabled) { background: #a84622; }
 .btn.brief-btn:disabled { opacity: 0.5; cursor: not-allowed; }

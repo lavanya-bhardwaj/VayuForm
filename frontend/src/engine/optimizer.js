@@ -16,12 +16,17 @@ export function totalCostInr(building, ids) {
  * Brute force is fine here: with the current catalogue it is only a few hundred combinations.
  */
 export function optimise(building) {
-  const candidates = interventionsFor(building.scenario).map((i) => i.id);
+  const excluded = building.excluded ?? [];
+  const required = building.required ?? [];
+  const candidates = interventionsFor(building.scenario)
+    .map((i) => i.id)
+    .filter((id) => !excluded.includes(id));
   const baseline = analyse(building, []);
   const results = [];
 
   for (let mask = 0; mask < 1 << candidates.length; mask++) {
     const ids = candidates.filter((_, bit) => mask & (1 << bit));
+    if (!required.every((id) => ids.includes(id))) continue;
     const costInr = totalCostInr(building, ids);
     if (costInr > building.budgetInr) continue;
     const impact = annualImpact(building, ids, baseline);
