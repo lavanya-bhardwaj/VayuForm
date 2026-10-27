@@ -40,5 +40,6 @@ export function optimise(building) {
   }
 
   results.sort((a, b) => b.savedInr - a.savedInr || a.costInr - b.costInr);
-  return { best: results[0] ?? null, ranked: results.slice(0, 5) };
+  // candidates: techniques allowed for this building after exclusions. feasible: sets that pass budget and requirements.
+  return { best: results[0] ?? null, ranked: results.slice(0, 5), candidates: candidates.length, feasible: results.length };
 }

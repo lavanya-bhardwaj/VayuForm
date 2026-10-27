@@ -7,6 +7,7 @@ import { analyse, annualImpact, buildGeometry, interventionCostInr } from "./eng
 import { BUILDING_LIMITS, DEFAULT_BUILDING, sanitiseBuilding } from "./engine/building";
 import { interventionsFor } from "./engine/interventions";
 import { optimise, totalCostInr } from "./engine/optimizer";
+import { breakdownFor } from "./engine/breakdown";
 import { runValidation } from "./engine/validation";
 import { validateConduction } from "./engine/validation_conduction";
 import { validateSolar } from "./engine/validation_solar";
@@ -14,9 +15,11 @@ import { validateInterventions } from "./engine/validation_interventions";
 import { validateEconomics } from "./engine/validation_economics";
 import { getSunTimes, getOutdoorTemperature } from "./utils/sunPosition";
 import { CLIMATES, SITE_IDS, climateFor } from "./engine/climate";
+import AiView from "./pages/AiView";
+import MlAnalysis from "./pages/MlAnalysis";
+import { API_URL } from "./config";
 import "./App.css";
-
-const API_URL = "http://localhost:3001";
+import "./pages/pages.css";
 
 const VIEW_MODES = [
   { id: "exterior", label: "3D Exterior" },
@@ -64,6 +67,11 @@ function App() {
   const [refineText, setRefineText] = useState("");
   const [refining, setRefining] = useState(false);
   const [refineNote, setRefineNote] = useState(null);
+  // Which screen is showing: the dashboard ("home"), the AI view or the ML analysis.
+  const [page, setPage] = useState("home");
+  // Every AI call made this session, for the AI view's charts.
+  const [aiLog, setAiLog] = useState([]);
+  const recordAi = (entry) => setAiLog((log) => [...log, { ...entry, at: Date.now() }]);
 
   // Sun position: hour of day (0-24)
   const { sunrise, sunset } = getSunTimes(undefined, climate.site);
@@ -130,6 +138,7 @@ function App() {
     if (!best) return;
     setExplaining(true);
     setExplanation(null);
+    const started = performance.now();
     try {
       const r = await fetch(`${API_URL}/api/explain`, {
         method: "POST",
@@ -151,12 +160,15 @@ function App() {
         }),
       });
       if (!r.ok) throw new Error(`status ${r.status}`);
-      setExplanation(await r.json());
+      const data = await r.json();
+      setExplanation(data);
+      recordAi({ kind: "explain", source: data.source, ms: performance.now() - started, input: `${best.ids.length} interventions`, summary: `${inr(best.savedInr)} a year` });
     } catch {
       setExplanation({
         text: "Could not reach the explanation service. Check that the backend is running on port 3001.",
         source: "error",
       });
+      recordAi({ kind: "explain", source: "error", ms: 0, input: `${best.ids.length} interventions`, summary: "Backend unreachable" });
     } finally {
       setExplaining(false);
     }
@@ -178,6 +190,7 @@ function App() {
     if (!refineText.trim()) return;
     setRefining(true);
     setRefineNote(null);
+    const started = performance.now();
     try {
       const r = await fetch(`${API_URL}/api/refine`, {
         method: "POST",
@@ -186,6 +199,7 @@ function App() {
       });
       if (!r.ok) throw new Error(`status ${r.status}`);
       const data = await r.json();
+      recordAi({ kind: "refine", source: data.source, ms: performance.now() - started, input: refineText, summary: `${data.exclude.length + data.include.length} change(s) read` });
       const excluded = [...new Set([...building.excluded, ...data.exclude])].filter((id) => !data.include.includes(id));
       const required = [...new Set([...building.required, ...data.include])].filter((id) => !data.exclude.includes(id));
       const next = sanitiseBuilding({
@@ -207,6 +221,7 @@ function App() {
       setRefineText("");
     } catch {
       setRefineNote({ text: "Could not reach the follow-up service. Check that the backend is running on port 3001.", source: "error" });
+      recordAi({ kind: "refine", source: "error", ms: 0, input: refineText, summary: "Backend unreachable" });
     } finally {
       setRefining(false);
     }
@@ -221,6 +236,7 @@ function App() {
     if (!brief.trim()) return;
     setBriefing(true);
     setBriefResult(null);
+    const started = performance.now();
     try {
       const r = await fetch(`${API_URL}/api/brief`, {
         method: "POST",
@@ -229,6 +245,7 @@ function App() {
       });
       if (!r.ok) throw new Error(`status ${r.status}`);
       const data = await r.json();
+      recordAi({ kind: "brief", source: data.source, ms: performance.now() - started, input: brief, summary: `${Object.keys(data.fields).length} fields read` });
       const found = Object.keys(data.fields).length > 0;
       if (found) {
         updateBuilding(data.fields);
@@ -240,6 +257,7 @@ function App() {
       setBriefResult({ assumptions: data.assumptions, source: data.source, found });
     } catch {
       setBriefResult({ assumptions: ["Could not reach the brief service. Check that the backend is running on port 3001."], source: "error", found: false });
+      recordAi({ kind: "brief", source: "error", ms: 0, input: brief, summary: "Backend unreachable" });
     } finally {
       setBriefing(false);
     }
@@ -366,11 +384,42 @@ const exportReport = () => {
 };
 
 
+  // Everything the AI view shows about the current recommendation. Built from the same numbers as the dashboard.
+  const recommendedIds = recommendation?.best?.ids ?? applied;
+  const recommendedCostInr = totalCostInr(building, recommendedIds);
+  const recommendedSavedInr = annualImpact(building, recommendedIds, baseline).savedInr;
+  const aiView = recommendation
+    ? {
+        location: climate.location,
+        scenario: building.scenario,
+        floors: building.floors,
+        footprintM2: building.footprintM2,
+        budgetInr: building.budgetInr,
+        excluded: building.excluded.map(nameOf),
+        required: building.required.map(nameOf),
+        ids: recommendedIds,
+        costInr: recommendedCostInr,
+        savedInr: recommendedSavedInr,
+        paybackYears: recommendedSavedInr > 0 ? recommendedCostInr / recommendedSavedInr : null,
+        breakdown: breakdownFor(building, recommendedIds),
+        ranked: recommendation.ranked,
+        candidates: recommendation.candidates,
+        feasible: recommendation.feasible,
+        briefSource: briefResult?.source ?? null,
+        refineSource: refineNote?.source ?? null,
+        explanation,
+        explaining,
+        onExplain: explainBest,
+      }
+    : null;
+
   return (
     <div className="vayu-app">
       {/* ---------- SIDEBAR ---------- */}
       <nav className="vayu-sidebar">
-        <button className="nav-item active">⌂ Home</button>
+        <button className={`nav-item ${page === "home" ? "active" : ""}`} onClick={() => setPage("home")}>⌂ Home</button>
+        <button className={`nav-item ${page === "ai" ? "active" : ""}`} onClick={() => setPage("ai")}>✦ AI View</button>
+        <button className={`nav-item ${page === "ml" ? "active" : ""}`} onClick={() => setPage("ml")}>◈ ML Analysis</button>
         <button className="nav-item">▦ Explore Heat Map</button>
         <button className="nav-item">▤ My Projects</button>
         <button className="nav-item">ⓘ About</button>
@@ -399,6 +448,8 @@ const exportReport = () => {
         </div>
       </header>
 
+      {page === "home" && (
+      <>
       {/* ---------- BRIEF BAR: describe the building in plain words ---------- */}
       <section className="vayu-brief">
         <form
@@ -847,6 +898,24 @@ const exportReport = () => {
         <div className="stat"><span className="stat-label">Indoor peak</span><strong>{current.indoorPeakC.toFixed(1)}°C</strong></div>
         <div className="stat"><span className="stat-label">Air changes / hr</span><strong>{current.achTotal.toFixed(1)}</strong></div>
       </footer>
+      {recommendation && (
+        <button className="explore-fab" onClick={() => setPage("ai")}>
+          ✦ Explore AI breakdown
+        </button>
+      )}
+      </>
+      )}
+
+      {page === "ai" && (
+        <div className="vayu-page">
+          <AiView aiLog={aiLog} onRecord={recordAi} view={aiView} />
+        </div>
+      )}
+      {page === "ml" && (
+        <div className="vayu-page">
+          <MlAnalysis />
+        </div>
+      )}
     </div>
   );
 }

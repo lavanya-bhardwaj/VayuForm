@@ -357,6 +357,124 @@ def ranking_check(model_predict_saved, rng, n_buildings):
         "buildings": n_buildings,
         "topPickMatchesPhysicsPct": round(100 * matches / n_buildings, 1),
         "meanRegretPct": round(100 * float(np.mean(regrets)), 2),
+        "regretsPct": [round(100 * r, 3) for r in regrets],
+    }
+
+
+def city_budget_check(model_predict_saved, rng, n_buildings):
+    """
+    The check the app actually faces: the four real cities, a random budget, and some exclusions.
+    Only feasible subsets count, as in the optimiser. Compares the surrogate's pick with the physics.
+    """
+    matches = 0
+    regrets = []
+    for _ in range(n_buildings):
+        city = rng.choice(CITY_IDS)
+        clim = CITY_FILES[city]
+        scenario = rng.choice(SCENARIOS)
+        b = {
+            "scenario": scenario,
+            "floors": rng.randint(*FLOORS_RANGE),
+            "footprintM2": rng.uniform(*FOOTPRINT_RANGE),
+            "wwr": rng.uniform(*WWR_RANGE),
+        }
+        budget = rng.uniform(50_000, 800_000)
+        excluded = [rng.choice(applicable_ids(scenario))] if rng.random() < 0.3 else []
+        options = [i for i in applicable_ids(scenario) if i not in excluded]
+        subsets = [list(s) for k in range(len(options) + 1) for s in itertools.combinations(options, k)]
+        feasible = [s for s in subsets if cost_inr(b, s, clim) <= budget]
+        if not feasible:
+            continue
+        physics = np.array([annual_saving_inr(b, s, clim) for s in feasible])
+        X = np.array([encode(clim, b, s) for s in feasible])
+        pick = int(np.argmax(model_predict_saved(X)))
+        best = physics.max()
+        if physics[pick] >= best - 1e-6:
+            matches += 1
+        regrets.append(0.0 if best <= 0 else (best - physics[pick]) / best)
+    return {
+        "buildings": len(regrets),
+        "topPickMatchesPhysicsPct": round(100 * matches / len(regrets), 1),
+        "meanRegretPct": round(100 * float(np.mean(regrets)), 2),
+        "worstRegretPct": round(100 * float(np.max(regrets)), 2),
+    }
+
+
+FRONTEND_REPORT = REPO / "frontend" / "src" / "data" / "ml" / "surrogate-report.json"
+
+
+def permutation_importance(predict_raw, X, y, rng, repeats=5):
+    """
+    For each feature, shuffle its column and measure how much the error on each target grows.
+    Returned as a share of the total growth, so the bars add up to 100% per target.
+    """
+    base_mae = np.abs(predict_raw(X) - y).mean(axis=0)
+    growth = np.zeros((X.shape[1], len(TARGETS)))
+    for f in range(X.shape[1]):
+        for _ in range(repeats):
+            Xp = X.copy()
+            Xp[:, f] = rng.permutation(Xp[:, f])
+            growth[f] += np.abs(predict_raw(Xp) - y).mean(axis=0) - base_mae
+        growth[f] /= repeats
+    growth = np.clip(growth, 0, None)
+    share = growth / growth.sum(axis=0, keepdims=True) * 100
+    return {name: [round(float(v), 2) for v in share[:, k]] for k, name in enumerate(TARGETS)}
+
+
+def build_report(model, X, y, X_test, y_test, predict_raw, rank, args, layers):
+    """Diagnostics for the ML analysis page. Holds no weights, only what the charts need."""
+    rng = np.random.default_rng(args.seed)
+    pred_test = predict_raw(X_test)
+    picks = rng.choice(len(X_test), size=min(200, len(X_test)), replace=False)
+    scatter = [
+        {"actual": round(float(y_test[i, 0]), 3), "predicted": round(float(pred_test[i, 0]), 3)}
+        for i in picks
+    ]
+    ratio_scatter = [
+        {"actual": round(float(y_test[i, 1]), 4), "predicted": round(float(pred_test[i, 1]), 4)}
+        for i in picks
+    ]
+    floors = X[:, 4].astype(int)
+    footprint_bins = np.histogram(X[:, 5], bins=10, range=FOOTPRINT_RANGE)[0]
+    wwr_bins = np.histogram(X[:, 6], bins=9, range=WWR_RANGE)[0]
+    included = X[:, 7:].sum(axis=1).astype(int)
+    per_intervention = X[:, 7:].mean(axis=0) * 100
+    return {
+        "trainedOn": date.today().isoformat(),
+        "seed": args.seed,
+        "samples": args.samples,
+        "architecture": {
+            "inputs": len(FEATURES),
+            "hidden": [layer["weights"][0].__len__() for layer in layers[:-1]],
+            "outputs": len(TARGETS),
+            "parameters": int(sum(np.array(layer["weights"]).size + len(layer["bias"]) for layer in layers)),
+            "iterations": int(model.n_iter_),
+            "bestValidationR2": round(float(max(model.validation_scores_)), 4),
+            "activation": "relu",
+            "optimiser": "adam",
+        },
+        "features": FEATURES,
+        "targets": TARGETS,
+        "testMetrics": metrics(X_test, y_test, pred_test),
+        "rankingCheck": {k: v for k, v in rank.items() if k != "regretsPct"},
+        "regretsPct": rank["regretsPct"],
+        "scatter": scatter,
+        "ratioScatter": ratio_scatter,
+        "loss": {
+            "train": [round(float(v), 5) for v in model.loss_curve_],
+            "validationR2": [round(float(v), 5) for v in model.validation_scores_],
+        },
+        "importance": permutation_importance(predict_raw, X_test, y_test, rng),
+        "sampling": {
+            "floorsCounts": {str(f): int((floors == f).sum()) for f in range(FLOORS_RANGE[0], FLOORS_RANGE[1] + 1)},
+            "footprintBins": footprint_bins.tolist(),
+            "footprintRange": FOOTPRINT_RANGE,
+            "wwrBins": wwr_bins.tolist(),
+            "wwrRange": WWR_RANGE,
+            "interventionShare": {name: round(float(v), 1) for name, v in zip(CATALOGUE_IDS, per_intervention)},
+            "includedCounts": {str(n): int((included == n).sum()) for n in range(len(CATALOGUE_IDS) + 1)},
+            "climateBounds": BOUNDS,
+        },
     }
 
 
@@ -416,6 +534,17 @@ def main():
         args.ranking_buildings,
     )
 
+    city_check = city_budget_check(
+        lambda Xs: savings_from_rows(Xs, predict_raw(Xs)[:, 1]),
+        random.Random(args.seed + 2),
+        args.ranking_buildings,
+    )
+    report = build_report(model, X, y, X_test, y_test, predict_raw, rank, args, layers)
+    report["cityBudgetCheck"] = city_check
+    FRONTEND_REPORT.parent.mkdir(parents=True, exist_ok=True)
+    with open(FRONTEND_REPORT, "w") as f:
+        json.dump(report, f)
+
     model_json = {
         "name": "vayuform-surrogate",
         "schemaVersion": 1,
@@ -428,7 +557,7 @@ def main():
         "targetScaler": {"mean": y_scaler.mean_.tolist(), "scale": y_scaler.scale_.tolist()},
         "layers": layers,
         "testMetrics": test_metrics,
-        "rankingCheck": rank,
+        "rankingCheck": {k: v for k, v in rank.items() if k != "regretsPct"},
         "sampling": {
             "climateBounds": BOUNDS,
             "floors": FLOORS_RANGE,
@@ -447,7 +576,9 @@ def main():
         print(f"  {name}: MAE {m['mae']:.3f}, RMSE {m['rmse']:.3f}, R² {m['r2']:.4f}")
     print(f"Ranking check on {rank['buildings']} fresh buildings: top pick matches physics "
           f"{rank['topPickMatchesPhysicsPct']}% of the time, mean regret {rank['meanRegretPct']}%")
-    print(f"Wrote {args.out}")
+    print(f"City check on {city_check['buildings']} real-city buildings with budgets: top pick matches physics "
+          f"{city_check['topPickMatchesPhysicsPct']}% of the time, mean regret {city_check['meanRegretPct']}%")
+    print(f"Wrote {args.out} and {FRONTEND_REPORT}")
 
 
 if __name__ == "__main__":
