@@ -468,6 +468,9 @@ function App() {
               </span>
             </div>
           </div>
+          <p className="climate-source">
+            Design peak {climate.outdoorPeakC} °C from Open-Meteo, Delhi 2015–2024 (May–June). Vertical sun values are still placeholders.
+          </p>
 
           <h3 className="group-label impact-title">Impact</h3>
           <p className="panel-sub">Compared with the building as it is today</p>
@@ -548,7 +551,6 @@ function App() {
         <div className="stat"><span className="stat-label">Solar exposure</span><strong>{level(thermalScore)}</strong></div>
         <div className="stat"><span className="stat-label">Indoor peak</span><strong>{current.indoorPeakC.toFixed(1)}°C</strong></div>
         <div className="stat"><span className="stat-label">Air changes / hr</span><strong>{current.achTotal.toFixed(1)}</strong></div>
-        <div className="hint">ⓘ Estimates from a simplified model. Costs are rough, pending CPWD DSR check.</div>
       </footer>
     </div>
   );

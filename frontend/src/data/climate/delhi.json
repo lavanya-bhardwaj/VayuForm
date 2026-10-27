@@ -1,9 +1,17 @@
 {
-  "_note": "Design-day values for New Delhi, mid-May afternoon peak. Simplified: each surface is taken at its own peak irradiance (not simultaneous), which makes the result a conservative worst case. Replace with values processed from the ISHRAE New Delhi EPW file when available.",
+  "_note": "Design-day values for New Delhi. Simplified: each surface is taken at its own peak irradiance (not simultaneous), which makes the result a conservative worst case. outdoorPeakC and solarPeakWm2.roof come from Open-Meteo historical data (see source). The vertical orientations are still placeholders. Replace them with values processed from the ISHRAE New Delhi EPW file when available.",
   "location": "New Delhi (NCR)",
-  "outdoorPeakC": 44,
+  "source": {
+    "provider": "Open-Meteo Historical Weather API",
+    "url": "https://archive-api.open-meteo.com/v1/archive",
+    "coordinates": { "lat": 28.6139, "lon": 77.209 },
+    "period": "2015-05-01 to 2024-06-30, May and June only",
+    "method": "Median across years of the hottest hour (temperature) and the highest horizontal shortwave radiation (roof). Reproduce with scripts/fetch-climate.mjs.",
+    "fetchedOn": "2026-10-27"
+  },
+  "outdoorPeakC": 44.1,
   "indoorComfortC": 28,
-  "solarPeakWm2": { "N": 150, "E": 550, "S": 350, "W": 650, "roof": 900 },
+  "solarPeakWm2": { "N": 150, "E": 550, "S": 350, "W": 650, "roof": 919 },
   "surfaceHeatTransferCoeffWm2K": 17,
   "airDensityTimesSpecificHeat": 1206,
   "storeyHeightM": 3.2,

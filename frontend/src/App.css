@@ -187,4 +187,5 @@ button { font: inherit; cursor: pointer; }
 .explain-btn { width: 100%; margin: 12px 0 4px; }
 .explanation { font-size: 13px; line-height: 1.5; color: var(--ink); margin: 10px 0 14px; }
 .explain-source { display: block; margin-top: 6px; font-size: 11px; color: var(--muted); }
+.climate-source { margin: 10px 4px 0; font-size: 12px; line-height: 1.4; color: var(--muted); }
 
