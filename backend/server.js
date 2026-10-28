@@ -6,6 +6,27 @@ dotenv.config();
 
 const app = express();
 app.use(express.json({ limit: "100kb" }));
+
+// Per-IP request limit for /api so one client cannot spend the AI quota or flood the server.
+const RATE_WINDOW_MS = 60_000;
+const RATE_MAX = Number(process.env.RATE_LIMIT_PER_MINUTE) || 30;
+const hits = new Map();
+app.use("/api", (req, res, next) => {
+  const now = Date.now();
+  const key = req.ip;
+  const entry = hits.get(key);
+  if (!entry || now - entry.start >= RATE_WINDOW_MS) {
+    hits.set(key, { start: now, count: 1 });
+  } else {
+    entry.count += 1;
+    if (entry.count > RATE_MAX) {
+      res.setHeader("Retry-After", Math.ceil((entry.start + RATE_WINDOW_MS - now) / 1000));
+      return res.status(429).json({ error: "Too many requests. Wait a minute and try again." });
+    }
+  }
+  if (hits.size > 10_000) hits.clear(); // keep memory bounded on a long-running server
+  next();
+});
 // Let the local frontend (any localhost port) call this API from the browser.
 app.use((req, res, next) => {
   const origin = req.headers.origin || "";
@@ -39,7 +60,7 @@ function fallbackExplanation({ ids = [], costInr, savedInr, paybackYears, indoor
 }
 
 app.get("/health", (_req, res) => {
-  res.json({ ok: true, keyLoaded: Boolean(process.env.GROQ_API_KEY), model: MODEL });
+  res.json({ ok: true, model: MODEL });
 });
 
 app.post("/api/explain", async (req, res) => {
@@ -282,11 +303,18 @@ app.post("/api/refine", async (req, res) => {
 });
 
 // Surrogate model routes. No AI call and no network: the model runs locally in a few microseconds.
+/** Bad input gets its message back. Anything else is logged on the server and the caller sees a generic error. */
+function sendMlError(res, err) {
+  if (err instanceof surrogate.InputError) return res.status(400).json({ error: err.message });
+  console.error("Surrogate model failed:", err);
+  return res.status(500).json({ error: "The model could not answer. Try again." });
+}
+
 app.post("/api/ml/predict", (req, res) => {
   try {
     return res.json(surrogate.predict(req.body?.building ?? {}, req.body?.ids ?? []));
   } catch (err) {
-    return res.status(400).json({ error: err.message });
+    return sendMlError(res, err);
   }
 });
 
@@ -294,8 +322,16 @@ app.post("/api/ml/optimize", (req, res) => {
   try {
     return res.json(surrogate.optimise(req.body?.building ?? {}));
   } catch (err) {
-    return res.status(400).json({ error: err.message });
+    return sendMlError(res, err);
   }
+});
+
+// Catches malformed JSON and other request errors, so the caller gets JSON rather than an HTML stack trace.
+app.use((err, _req, res, _next) => {
+  if (err.type === "entity.too.large") return res.status(413).json({ error: "The request is too large." });
+  if (err instanceof SyntaxError && err.status === 400) return res.status(400).json({ error: "The request body is not valid JSON." });
+  console.error("Request failed:", err);
+  return res.status(err.status || 500).json({ error: "Something went wrong on the server." });
 });
 
 app.listen(PORT, () => console.log(`VayuForm backend on http://localhost:${PORT}`));

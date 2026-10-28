@@ -52,11 +52,14 @@ export function applicableIds(scenario) {
   return interventions.filter((i) => i.applicableTo.includes(scenario)).map((i) => i.id);
 }
 
+/** Raised for bad caller input. The server shows its message; any other error is logged and hidden. */
+export class InputError extends Error {}
+
 /** Throws if an id is unknown or not allowed for the scenario. Returns the ids in catalogue order. */
 function checkIds(building, ids) {
   const allowed = applicableIds(building.scenario);
   const bad = ids.filter((id) => !allowed.includes(id));
-  if (bad.length) throw new Error(`Not available for ${building.scenario}: ${bad.join(", ")}`);
+  if (bad.length) throw new InputError(`Not available for ${building.scenario}: ${bad.join(", ")}`);
   return allowed.filter((id) => ids.includes(id));
 }
 
